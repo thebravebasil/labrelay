@@ -704,3 +704,145 @@ section.auth{
 }
 .btn-oauth:hover{ background:var(--paper-2); border-color:var(--sage); }
 .btn-oauth svg{ width:18px; height:18px; flex-shrink:0; }
+
+/* ---------- APPLY MODAL ---------- */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(15,20,33,0.72);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:200;
+  padding:20px;
+}
+.modal-overlay.show{ display:flex; }
+.modal-box{
+  background:var(--paper);
+  color:var(--text-on-paper);
+  border-radius:var(--radius);
+  padding:30px 28px;
+  max-width:460px;
+  width:100%;
+  border:1px solid var(--paper-line);
+}
+.modal-box h3{
+  font-family:var(--serif);
+  font-size:20px;
+  margin:0 0 6px;
+}
+.modal-box .modal-sub{
+  font-size:13px;
+  color:var(--text-on-paper-dim);
+  margin:0 0 18px;
+}
+.modal-box textarea{
+  width:100%;
+  min-height:100px;
+  font-family:var(--sans);
+  font-size:14px;
+  padding:11px 13px;
+  border:1px solid var(--paper-line);
+  border-radius:var(--radius);
+  background:var(--paper-2);
+  color:var(--text-on-paper);
+  resize:vertical;
+  margin-bottom:18px;
+}
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+.btn-ghost{
+  background:none;
+  border:1px solid var(--paper-line);
+  color:var(--text-on-paper-dim);
+  padding:11px 18px;
+  border-radius:var(--radius);
+  font-family:var(--sans);
+  font-weight:600;
+  font-size:14px;
+  cursor:pointer;
+}
+.btn-ghost:hover{ border-color:var(--sage); color:var(--text-on-paper); }
+
+/* ---------- MY TASKS / APPLICANTS ---------- */
+.mytask-card{
+  background:var(--paper);
+  color:var(--text-on-paper);
+  border:1px solid var(--paper-line);
+  border-radius:var(--radius);
+  padding:26px 26px 22px;
+  margin-bottom:22px;
+}
+.mytask-card h3{
+  font-family:var(--serif);
+  font-size:19px;
+  margin:0 0 4px;
+}
+.mytask-meta{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--sage-dark);
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  margin-bottom:16px;
+}
+.applicant-list{
+  border-top:1px dashed var(--paper-line);
+  padding-top:14px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.applicant-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  background:var(--paper-2);
+  border-radius:var(--radius);
+  padding:14px 16px;
+}
+.applicant-info strong{ font-size:14px; }
+.applicant-info .applicant-email{
+  font-family:var(--mono);
+  font-size:11.5px;
+  color:var(--text-on-paper-dim);
+  display:block;
+  margin:2px 0 8px;
+}
+.applicant-info .applicant-note{
+  font-size:13.5px;
+  color:var(--text-on-paper);
+  margin:0;
+}
+.applicant-actions{
+  display:flex;
+  gap:8px;
+  flex-shrink:0;
+}
+.status-badge{
+  font-family:var(--mono);
+  font-size:11px;
+  padding:5px 10px;
+  border-radius:20px;
+  text-transform:uppercase;
+}
+.status-pending{ background:#EBD9A6; color:#5A4A16; }
+.status-accepted{ background:var(--sage); color:#fff; }
+.status-declined{ background:var(--rust); color:#fff; }
+.btn-accept, .btn-decline{
+  font-family:var(--sans);
+  font-size:12.5px;
+  font-weight:600;
+  padding:7px 12px;
+  border-radius:var(--radius);
+  cursor:pointer;
+  border:1px solid transparent;
+}
+.btn-accept{ background:var(--sage); color:#fff; }
+.btn-accept:hover{ background:var(--sage-dark); }
+.btn-decline{ background:none; border-color:var(--paper-line); color:var(--text-on-paper-dim); }
+.btn-decline:hover{ border-color:var(--rust); color:var(--rust); }

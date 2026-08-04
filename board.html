@@ -19,6 +19,7 @@
     <nav class="links">
       <a href="board.html">Browse Tasks</a>
       <a href="post.html">Post a Task</a>
+      <a href="my-tasks.html">My Tasks</a>
       <a href="about.html">About</a>
     </nav>
     <div class="nav-auth" id="navAuth"></div>
@@ -39,6 +40,18 @@
   </div>
 </section>
 
+<div class="modal-overlay" id="applyModal">
+  <div class="modal-box">
+    <h3 id="applyModalTitle">Apply for this task</h3>
+    <p class="modal-sub">A short note on why this interests you goes a long way.</p>
+    <textarea id="applyNote" placeholder="e.g. I've been wanting research experience in this area because..."></textarea>
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" id="applyCancel">Cancel</button>
+      <button type="button" class="btn btn-amber" id="applySubmit">Send application</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   <div class="wrap footer-inner">
     <span>LabRelay — a research task exchange · v1</span>
@@ -49,7 +62,7 @@
 <script type="module">
   import { db, auth, initNavAuth } from "./firebase-init.js";
   import {
-    collection, query, orderBy, onSnapshot
+    collection, query, orderBy, onSnapshot, addDoc, doc, getDoc, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   initNavAuth();
@@ -57,11 +70,19 @@
   const grid = document.getElementById("taskGrid");
   const tasksCol = collection(db, "tasks");
 
+  const modal = document.getElementById("applyModal");
+  const modalTitle = document.getElementById("applyModalTitle");
+  const noteBox = document.getElementById("applyNote");
+  const applyCancel = document.getElementById("applyCancel");
+  const applySubmit = document.getElementById("applySubmit");
+  let activeTaskId = null;
+  let activeTaskTitle = null;
+
   grid.innerHTML = '<p class="empty-note">Loading tasks…</p>';
 
   const q = query(tasksCol, orderBy("createdAt", "desc"));
   onSnapshot(q, (snapshot) => {
-    const docs = snapshot.docs.map(d => d.data());
+    const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     renderTasks(docs);
   }, (err) => {
     console.error("Firestore read failed:", err);
@@ -95,11 +116,55 @@
           window.location.href = "login.html";
           return;
         }
-        alert("In the working version, this sends your application straight to the researcher. For now, this is a placeholder.");
+        if (auth.currentUser.uid === t.createdBy){
+          alert("This is your own task — you can't apply to it.");
+          return;
+        }
+        activeTaskId = t.id;
+        activeTaskTitle = t.title;
+        modalTitle.textContent = `Apply: ${t.title}`;
+        noteBox.value = "";
+        modal.classList.add("show");
       });
       grid.appendChild(card);
     });
   }
+
+  applyCancel.addEventListener("click", () => modal.classList.remove("show"));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("show"); });
+
+  applySubmit.addEventListener("click", async () => {
+    if (!activeTaskId || !auth.currentUser) return;
+    const note = noteBox.value.trim();
+    applySubmit.disabled = true;
+    applySubmit.textContent = "Sending…";
+
+    try {
+      let studentName = auth.currentUser.email;
+      try {
+        const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        if (snap.exists() && snap.data().name) studentName = snap.data().name;
+      } catch(e) {}
+
+      await addDoc(collection(db, "tasks", activeTaskId, "applications"), {
+        studentId: auth.currentUser.uid,
+        studentName,
+        studentEmail: auth.currentUser.email,
+        note,
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+
+      modal.classList.remove("show");
+      alert("Application sent! The researcher will reach out if it's a fit.");
+    } catch (err) {
+      console.error("Failed to send application:", err);
+      alert("Something went wrong sending your application. Please try again.");
+    } finally {
+      applySubmit.disabled = false;
+      applySubmit.textContent = "Send application";
+    }
+  });
 </script>
 </body>
 </html>
