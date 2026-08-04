@@ -145,9 +145,16 @@
             }
             container.appendChild(row);
           });
+        }, (err) => {
+          console.error("Failed to load applicants:", err);
+          const container = document.getElementById(`applicants-${taskId}`);
+          if (container) container.innerHTML = '<p class="empty-note">Couldn\'t load applicants — check the console for details.</p>';
         });
         activeAppListeners.push(unsub);
       });
+    }, (err) => {
+      console.error("Failed to load your tasks:", err);
+      taskList.innerHTML = '<p class="empty-note">Couldn\'t load your tasks. Open the browser console (right-click → Inspect → Console) for the exact error — it may include a link to create a missing database index.</p>';
     });
   }
 </script>
