@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Browse Tasks — LabRelay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">LabRelay</span>
+      <span class="brand-no">no. 001 — research task exchange</span>
+    </a>
+    <nav class="links">
+      <a href="board.html">Browse Tasks</a>
+      <a href="post.html">Post a Task</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div class="nav-auth" id="navAuth"></div>
+  </div>
+</header>
+
+<div class="page-header">
+  <div class="wrap">
+    <div class="section-label">Open now</div>
+    <h1 class="section-title">The task board</h1>
+    <p>Every task here is live in the database — post one from the Post a Task page and it shows up here instantly for everyone.</p>
+  </div>
+</div>
+
+<section class="board" style="padding-top:56px;">
+  <div class="wrap">
+    <div class="task-grid" id="taskGrid"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>LabRelay — a research task exchange · v1</span>
+    <span>Built in Clarksburg, MD</span>
+  </div>
+</footer>
+
+<script type="module">
+  import { db, auth, initNavAuth } from "./firebase-init.js";
+  import {
+    collection, query, orderBy, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  initNavAuth();
+
+  const grid = document.getElementById("taskGrid");
+  const tasksCol = collection(db, "tasks");
+
+  grid.innerHTML = '<p class="empty-note">Loading tasks…</p>';
+
+  const q = query(tasksCol, orderBy("createdAt", "desc"));
+  onSnapshot(q, (snapshot) => {
+    const docs = snapshot.docs.map(d => d.data());
+    renderTasks(docs);
+  }, (err) => {
+    console.error("Firestore read failed:", err);
+    grid.innerHTML = '<p class="empty-note">Couldn\'t load tasks right now — check back soon.</p>';
+  });
+
+  function renderTasks(docs){
+    grid.innerHTML = "";
+    if (docs.length === 0){
+      grid.innerHTML = '<p class="empty-note">No open tasks right now — check back soon.</p>';
+      return;
+    }
+    docs.forEach(t => {
+      const card = document.createElement("div");
+      card.className = "task-card";
+      card.style.setProperty("--r", (t.r || 0) + "deg");
+      const tagsArr = Array.isArray(t.tags) ? t.tags : [];
+      card.innerHTML = `
+        <div class="task-meta">${t.tag} · ${t.loc}</div>
+        <h4>${t.title}</h4>
+        <p>${t.desc}</p>
+        <div class="task-tags">${tagsArr.map(x => `<span class="chip">${x}</span>`).join("")}</div>
+        <div class="task-foot">
+          <span class="task-time">${t.time}</span>
+          <button class="link-btn" type="button">I'm interested →</button>
+        </div>
+      `;
+      card.querySelector(".link-btn").addEventListener("click", () => {
+        if (!auth.currentUser){
+          alert("Please log in or sign up first so the researcher knows who's applying.");
+          window.location.href = "login.html";
+          return;
+        }
+        alert("In the working version, this sends your application straight to the researcher. For now, this is a placeholder.");
+      });
+      grid.appendChild(card);
+    });
+  }
+</script>
+</body>
+</html>

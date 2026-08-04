@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — LabRelay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">LabRelay</span>
+      <span class="brand-no">no. 001 — research task exchange</span>
+    </a>
+    <nav class="links">
+      <a href="board.html">Browse Tasks</a>
+      <a href="post.html">Post a Task</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div class="nav-auth" id="navAuth"></div>
+  </div>
+</header>
+
+<section class="auth">
+  <div class="wrap">
+    <form class="auth-form" id="signupForm">
+      <h2>Create an account</h2>
+      <p class="auth-sub">Takes under a minute.</p>
+      <div class="auth-error" id="authError"></div>
+      <div class="field">
+        <label for="s-name">Name</label>
+        <input id="s-name" type="text" required>
+      </div>
+      <div class="field">
+        <label for="s-email">Email</label>
+        <input id="s-email" type="email" required>
+      </div>
+      <div class="field">
+        <label for="s-pass">Password</label>
+        <input id="s-pass" type="password" minlength="6" required>
+      </div>
+      <div class="field">
+        <label>I am a</label>
+        <div class="radio-row">
+          <label><input type="radio" name="role" value="Student" checked> Student</label>
+          <label><input type="radio" name="role" value="Researcher"> Researcher / Doctor</label>
+        </div>
+      </div>
+      <button class="btn btn-amber" type="submit" style="width:100%; justify-content:center;">Sign up</button>
+
+      <div class="auth-divider">or</div>
+      <div class="oauth-row">
+        <button type="button" class="btn-oauth" id="googleBtn">
+          <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.66-.22-2.45H12v4.63h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.92l-3.87-3c-1.08.72-2.46 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.11A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54v-3.1H1.27a12 12 0 0 0 0 10.75z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.23 0 12 0A12 12 0 0 0 1.27 6.63l4 3.1C6.22 6.86 8.87 4.75 12 4.75z"/></svg>
+          Continue with Google
+        </button>
+      </div>
+
+      <p class="auth-switch">Already have an account? <a href="login.html">Log in</a></p>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>LabRelay — a research task exchange · v1</span>
+    <span>Built in Clarksburg, MD</span>
+  </div>
+</footer>
+
+<script type="module">
+  import { auth, db, initNavAuth } from "./firebase-init.js";
+  import {
+    createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  initNavAuth();
+
+  const form = document.getElementById("signupForm");
+  const errorBox = document.getElementById("authError");
+
+  async function afterOAuthSignup(user){
+    const snap = await getDoc(doc(db, "users", user.uid));
+    window.location.href = snap.exists() ? "index.html" : "complete-profile.html";
+  }
+
+  document.getElementById("googleBtn").addEventListener("click", async () => {
+    try {
+      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+      await afterOAuthSignup(cred.user);
+    } catch (err) {
+      console.error(err);
+      errorBox.textContent = "Google sign-in didn't go through. Please try again.";
+      errorBox.classList.add("show");
+    }
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.classList.remove("show");
+    const name = document.getElementById("s-name").value.trim();
+    const email = document.getElementById("s-email").value.trim();
+    const pass = document.getElementById("s-pass").value;
+    const role = document.querySelector('input[name="role"]:checked').value;
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = "Creating account…";
+
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, "users", cred.user.uid), {
+        name, email, role, createdAt: serverTimestamp()
+      });
+      window.location.href = "index.html";
+    } catch (err) {
+      console.error(err);
+      if (err.code === "auth/email-already-in-use"){
+        errorBox.textContent = "That email already has an account — try logging in instead.";
+      } else if (err.code === "auth/weak-password"){
+        errorBox.textContent = "Password needs to be at least 6 characters.";
+      } else {
+        errorBox.textContent = "Something went wrong creating your account. Please try again.";
+      }
+      errorBox.classList.add("show");
+      btn.disabled = false;
+      btn.textContent = "Sign up";
+    }
+  });
+</script>
+</body>
+</html>
