@@ -752,8 +752,28 @@
   </div>
 </footer>
 
-<script>
-  const tasks = [
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, getDocs, onSnapshot,
+    query, orderBy, serverTimestamp, limit
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD4j6dZlWOJA7sD6ix_kBZvOhqEbpyNL5Y",
+    authDomain: "labrelay.firebaseapp.com",
+    projectId: "labrelay",
+    storageBucket: "labrelay.firebasestorage.app",
+    messagingSenderId: "244000540166",
+    appId: "1:244000540166:web:ee4159373eb4bb3bbe2587",
+    measurementId: "G-W1MY5C0ER9"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const tasksCol = collection(db, "tasks");
+
+  const seedTasks = [
     { title: "Screen 40 papers on pediatric sleep patterns", desc: "Sort abstracts by relevance for a systematic review.", tag: "Lit. Review", time: "≈ 4 hrs", loc: "Remote", tags: ["Careful reading","PubMed"], r: -2 },
     { title: "Digitize 1980s clinic intake forms", desc: "Transcribe scanned forms into a spreadsheet.", tag: "Data Entry", time: "≈ 6 hrs", loc: "Remote", tags: ["Excel","Attention to detail"], r: 1.5 },
     { title: "Recruit survey respondents for a nutrition study", desc: "Share a screener with local community groups.", tag: "Outreach", time: "≈ 3 hrs", loc: "Remote", tags: ["Communication"], r: -1 },
@@ -762,21 +782,31 @@
 
   const grid = document.getElementById("taskGrid");
 
-  function renderTasks(){
+  async function seedIfEmpty(){
+    const snap = await getDocs(query(tasksCol, limit(1)));
+    if (snap.empty){
+      for (const t of seedTasks){
+        await addDoc(tasksCol, { ...t, createdAt: serverTimestamp() });
+      }
+    }
+  }
+
+  function renderTasks(docs){
     grid.innerHTML = "";
-    if (tasks.length === 0){
+    if (docs.length === 0){
       grid.innerHTML = '<p class="empty-note">No open tasks right now — check back soon.</p>';
       return;
     }
-    tasks.forEach(t => {
+    docs.forEach(t => {
       const card = document.createElement("div");
       card.className = "task-card";
       card.style.setProperty("--r", (t.r || 0) + "deg");
+      const tagsArr = Array.isArray(t.tags) ? t.tags : [];
       card.innerHTML = `
         <div class="task-meta">${t.tag} · ${t.loc}</div>
         <h4>${t.title}</h4>
         <p>${t.desc}</p>
-        <div class="task-tags">${t.tags.map(x => `<span class="chip">${x}</span>`).join("")}</div>
+        <div class="task-tags">${tagsArr.map(x => `<span class="chip">${x}</span>`).join("")}</div>
         <div class="task-foot">
           <span class="task-time">${t.time}</span>
           <button class="link-btn" type="button">I'm interested →</button>
@@ -789,34 +819,58 @@
     });
   }
 
-  renderTasks();
+  grid.innerHTML = '<p class="empty-note">Loading tasks…</p>';
+
+  seedIfEmpty().then(() => {
+    const q = query(tasksCol, orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(d => d.data());
+      renderTasks(docs);
+    }, (err) => {
+      console.error("Firestore read failed:", err);
+      grid.innerHTML = '<p class="empty-note">Couldn\'t load tasks right now — check back soon.</p>';
+    });
+  });
 
   const form = document.getElementById("taskForm");
   const toast = document.getElementById("toast");
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Posting…";
+
     const title = document.getElementById("f-title").value.trim();
     const desc = document.getElementById("f-desc").value.trim();
     const time = document.getElementById("f-time").value;
     const tagsRaw = document.getElementById("f-tags").value.trim();
     const loc = document.querySelector('input[name="loc"]:checked').value;
 
-    tasks.unshift({
-      title,
-      desc,
-      tag: "New",
-      time,
-      loc,
-      tags: tagsRaw ? tagsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
-      r: (Math.random() * 4 - 2).toFixed(1)
-    });
+    try {
+      await addDoc(tasksCol, {
+        title,
+        desc,
+        tag: "New",
+        time,
+        loc,
+        tags: tagsRaw ? tagsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
+        r: Number((Math.random() * 4 - 2).toFixed(1)),
+        createdAt: serverTimestamp()
+      });
 
-    renderTasks();
-    form.reset();
-    toast.classList.add("show");
-    document.getElementById("board").scrollIntoView({ behavior: "smooth" });
-    setTimeout(() => toast.classList.remove("show"), 4000);
+      form.reset();
+      toast.textContent = "Task posted — it's now live on the board below for everyone.";
+      toast.classList.add("show");
+      document.getElementById("board").scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => toast.classList.remove("show"), 4000);
+    } catch (err) {
+      console.error("Failed to post task:", err);
+      alert("Something went wrong posting this task. Please try again.");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Post task";
+    }
   });
 </script>
 
