@@ -122,7 +122,7 @@
                 <a href="mailto:${researcherEmail}?subject=${encodeURIComponent("LabRelay task: " + taskTitle)}">${researcherEmail}</a>.
               </p>
               <div class="submit-row" data-app-id="${appId}" data-task-id="${taskId}">
-                <input type="url" class="submission-input" placeholder="Paste a link to your finished work (Google Doc, Sheet, etc.)" value="${app.submissionLink || ""}">
+                <input type="text" class="submission-input" placeholder="Paste a link to your finished work (with or without https://)" value="${app.submissionLink || ""}">
                 <button type="button" class="btn-save-link">Save link</button>
               </div>
               ${savedLink}
@@ -156,12 +156,16 @@
         const input = row.querySelector(".submission-input");
         const btn = row.querySelector(".btn-save-link");
         btn.addEventListener("click", async () => {
-          const link = input.value.trim();
+          let link = input.value.trim();
           if (!link) return;
+          if (!/^https?:\/\//i.test(link)){
+            link = "https://" + link;
+          }
           btn.disabled = true;
           btn.textContent = "Saving…";
           try {
             await updateDoc(doc(db, "tasks", taskId, "applications", appId), { submissionLink: link });
+            input.value = link;
           } catch (err) {
             console.error("Failed to save submission link:", err);
             alert("Couldn't save that link. Please try again.");
