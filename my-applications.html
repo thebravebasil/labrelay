@@ -55,7 +55,7 @@
   import { db, auth, initNavAuth } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    collectionGroup, query, where, orderBy, onSnapshot, doc, getDoc
+    collectionGroup, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   initNavAuth();
@@ -92,20 +92,44 @@
       appList.innerHTML = '<p class="empty-note">Loading task details…</p>';
       const rows = await Promise.all(snapshot.docs.map(async (appDoc) => {
         const app = appDoc.data();
+        const appId = appDoc.id;
         // The parent of an "applications" doc is the task document.
         const taskRef = appDoc.ref.parent.parent;
+        const taskId = taskRef.id;
         let taskTitle = "Untitled task";
         let taskMeta = "";
+        let researcherEmail = "";
         try {
           const taskSnap = await getDoc(taskRef);
           if (taskSnap.exists()){
             const t = taskSnap.data();
             taskTitle = t.title;
             taskMeta = `${t.tag || ""} · ${t.time} · ${t.loc}`;
+            researcherEmail = t.createdByEmail || "";
           }
         } catch (e) { /* task may have been removed */ }
 
         const statusClass = app.status === "accepted" ? "status-accepted" : app.status === "declined" ? "status-declined" : "status-pending";
+
+        let acceptedPanel = "";
+        if (app.status === "accepted"){
+          const savedLink = app.submissionLink
+            ? `<p class="submission-saved">Submitted: <a href="${app.submissionLink}" target="_blank" rel="noopener">${app.submissionLink}</a></p>`
+            : "";
+          acceptedPanel = `
+            <div class="accepted-panel">
+              <p class="contact-line">You're in! Email your finished work directly to
+                <a href="mailto:${researcherEmail}?subject=${encodeURIComponent("LabRelay task: " + taskTitle)}">${researcherEmail}</a>.
+              </p>
+              <div class="submit-row" data-app-id="${appId}" data-task-id="${taskId}">
+                <input type="url" class="submission-input" placeholder="Paste a link to your finished work (Google Doc, Sheet, etc.)" value="${app.submissionLink || ""}">
+                <button type="button" class="btn-save-link">Save link</button>
+              </div>
+              ${savedLink}
+            </div>
+          `;
+        }
+
         return `
           <div class="mytask-card">
             <h3>${taskTitle}</h3>
@@ -118,11 +142,35 @@
                 <span class="status-badge ${statusClass}">${app.status}</span>
               </div>
             </div>
+            ${acceptedPanel}
           </div>
         `;
       }));
 
       appList.innerHTML = rows.join("");
+
+      // Wire up "Save link" buttons after render.
+      appList.querySelectorAll(".submit-row").forEach(row => {
+        const appId = row.dataset.appId;
+        const taskId = row.dataset.taskId;
+        const input = row.querySelector(".submission-input");
+        const btn = row.querySelector(".btn-save-link");
+        btn.addEventListener("click", async () => {
+          const link = input.value.trim();
+          if (!link) return;
+          btn.disabled = true;
+          btn.textContent = "Saving…";
+          try {
+            await updateDoc(doc(db, "tasks", taskId, "applications", appId), { submissionLink: link });
+          } catch (err) {
+            console.error("Failed to save submission link:", err);
+            alert("Couldn't save that link. Please try again.");
+          } finally {
+            btn.disabled = false;
+            btn.textContent = "Save link";
+          }
+        });
+      });
     }, (err) => {
       console.error("Failed to load applications:", err);
       appList.innerHTML = '<p class="empty-note">Couldn\'t load your applications. Open the browser console for the exact error — it may include a link to create a missing database index.</p>';
