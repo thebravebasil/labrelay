@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post a Task — LabRelay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">LabRelay</span>
+      <span class="brand-no">no. 001 — research task exchange</span>
+    </a>
+    <nav class="links">
+      <a href="board.html">Browse Tasks</a>
+      <a href="post.html">Post a Task</a>
+      <a href="my-tasks.html">My Tasks</a>
+      <a href="my-applications.html">My Applications</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div class="nav-auth" id="navAuth"></div>
+  </div>
+</header>
+
+<div class="page-header">
+  <div class="wrap">
+    <div class="section-label">For researchers</div>
+    <h1 class="section-title">Post a task</h1>
+    <p>You'll need to be logged in so students know who they're helping, and so you can manage your own posted tasks later.</p>
+  </div>
+</div>
+
+<section class="post" style="padding-top:56px;">
+  <div class="wrap">
+
+    <div id="gate" class="gate-note" style="display:none;">
+      You need to be logged in to post a task. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a> — it takes under a minute.
+    </div>
+
+    <div id="formWrap" style="display:none;">
+      <div class="toast" id="toast">Task posted — it's now live on the board.</div>
+      <form class="task-form" id="taskForm">
+        <div class="field">
+          <label for="f-title">Task title</label>
+          <input id="f-title" type="text" placeholder="e.g. Code survey responses for a diabetes study" required>
+        </div>
+        <div class="field">
+          <label for="f-desc">Short description</label>
+          <textarea id="f-desc" placeholder="What does the student actually need to do?" required></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f-time">Estimated time</label>
+            <select id="f-time">
+              <option>1–2 hrs</option>
+              <option>3–5 hrs</option>
+              <option>5–10 hrs</option>
+              <option>10+ hrs / ongoing</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-tags">Skills needed (comma-separated)</label>
+            <input id="f-tags" type="text" placeholder="e.g. Excel, careful reading">
+          </div>
+        </div>
+        <div class="field">
+          <label>Where does this happen?</label>
+          <div class="radio-row">
+            <label><input type="radio" name="loc" value="Remote" checked> Remote</label>
+            <label><input type="radio" name="loc" value="In-person"> In-person</label>
+          </div>
+        </div>
+        <p class="form-note">Posted as <strong id="postingAs"></strong>. Students who apply will reach out to the email on your account.</p>
+        <button class="btn btn-amber" type="submit">Post task</button>
+      </form>
+    </div>
+
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>LabRelay — a research task exchange · v1</span>
+    <span>Built in Clarksburg, MD</span>
+  </div>
+</footer>
+
+<script type="module">
+  import { db, auth, initNavAuth } from "./firebase-init.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  initNavAuth();
+
+  const gate = document.getElementById("gate");
+  const formWrap = document.getElementById("formWrap");
+  const postingAs = document.getElementById("postingAs");
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user){
+      gate.style.display = "block";
+      formWrap.style.display = "none";
+    } else {
+      gate.style.display = "none";
+      formWrap.style.display = "block";
+      postingAs.textContent = user.email;
+    }
+  });
+
+  const form = document.getElementById("taskForm");
+  const toast = document.getElementById("toast");
+  const tasksCol = collection(db, "tasks");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!auth.currentUser) return;
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Posting…";
+
+    const title = document.getElementById("f-title").value.trim();
+    const desc = document.getElementById("f-desc").value.trim();
+    const time = document.getElementById("f-time").value;
+    const tagsRaw = document.getElementById("f-tags").value.trim();
+    const loc = document.querySelector('input[name="loc"]:checked').value;
+
+    try {
+      await addDoc(tasksCol, {
+        title,
+        desc,
+        tag: "New",
+        time,
+        loc,
+        tags: tagsRaw ? tagsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
+        r: Number((Math.random() * 4 - 2).toFixed(1)),
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser.uid,
+        createdByEmail: auth.currentUser.email
+      });
+
+      form.reset();
+      toast.classList.add("show");
+      setTimeout(() => { window.location.href = "board.html"; }, 1200);
+    } catch (err) {
+      console.error("Failed to post task:", err);
+      alert("Something went wrong posting this task. Please try again.");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Post task";
+    }
+  });
+</script>
+</body>
+</html>

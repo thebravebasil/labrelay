@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Applications — LabRelay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">LabRelay</span>
+      <span class="brand-no">no. 001 — research task exchange</span>
+    </a>
+    <nav class="links">
+      <a href="board.html">Browse Tasks</a>
+      <a href="post.html">Post a Task</a>
+      <a href="my-tasks.html">My Tasks</a>
+      <a href="my-applications.html">My Applications</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div class="nav-auth" id="navAuth"></div>
+  </div>
+</header>
+
+<div class="page-header">
+  <div class="wrap">
+    <div class="section-label">For students</div>
+    <h1 class="section-title">My applications</h1>
+    <p>Every task you've applied to, and where things stand. Statuses update automatically once a researcher responds.</p>
+  </div>
+</div>
+
+<section class="post" style="padding-top:50px;">
+  <div class="wrap">
+    <div id="gate" class="gate-note" style="display:none;">
+      You need to be logged in to see this. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a>.
+    </div>
+    <div id="appList"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>LabRelay — a research task exchange · v1</span>
+    <span>Built in Clarksburg, MD</span>
+  </div>
+</footer>
+
+<script type="module">
+  import { db, auth, initNavAuth } from "./firebase-init.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    collectionGroup, query, where, orderBy, onSnapshot, doc, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  initNavAuth();
+
+  const gate = document.getElementById("gate");
+  const appList = document.getElementById("appList");
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user){
+      gate.style.display = "block";
+      appList.innerHTML = "";
+      return;
+    }
+    gate.style.display = "none";
+    loadMyApplications(user.uid);
+  });
+
+  function loadMyApplications(uid){
+    appList.innerHTML = '<p class="empty-note">Loading your applications…</p>';
+
+    // Uses a collection group query across every task's "applications" subcollection.
+    const q = query(
+      collectionGroup(db, "applications"),
+      where("studentId", "==", uid),
+      orderBy("createdAt", "desc")
+    );
+
+    onSnapshot(q, async (snapshot) => {
+      if (snapshot.empty){
+        appList.innerHTML = '<p class="empty-note">You haven\'t applied to anything yet — <a href="board.html">browse open tasks</a> to get started.</p>';
+        return;
+      }
+
+      appList.innerHTML = '<p class="empty-note">Loading task details…</p>';
+      const rows = await Promise.all(snapshot.docs.map(async (appDoc) => {
+        const app = appDoc.data();
+        // The parent of an "applications" doc is the task document.
+        const taskRef = appDoc.ref.parent.parent;
+        let taskTitle = "Untitled task";
+        let taskMeta = "";
+        try {
+          const taskSnap = await getDoc(taskRef);
+          if (taskSnap.exists()){
+            const t = taskSnap.data();
+            taskTitle = t.title;
+            taskMeta = `${t.tag || ""} · ${t.time} · ${t.loc}`;
+          }
+        } catch (e) { /* task may have been removed */ }
+
+        const statusClass = app.status === "accepted" ? "status-accepted" : app.status === "declined" ? "status-declined" : "status-pending";
+        return `
+          <div class="mytask-card">
+            <h3>${taskTitle}</h3>
+            <div class="mytask-meta">${taskMeta}</div>
+            <div class="applicant-row" style="background:none; padding:0;">
+              <div class="applicant-info">
+                <p class="applicant-note">${app.note ? app.note : "<em>No note included.</em>"}</p>
+              </div>
+              <div class="applicant-actions">
+                <span class="status-badge ${statusClass}">${app.status}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }));
+
+      appList.innerHTML = rows.join("");
+    }, (err) => {
+      console.error("Failed to load applications:", err);
+      appList.innerHTML = '<p class="empty-note">Couldn\'t load your applications. Open the browser console for the exact error — it may include a link to create a missing database index.</p>';
+    });
+  }
+</script>
+</body>
+</html>
