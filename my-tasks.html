@@ -124,8 +124,10 @@
             const row = document.createElement("div");
             row.className = "applicant-row";
             const statusClass = app.status === "accepted" ? "status-accepted" : app.status === "declined" ? "status-declined" : "status-pending";
-            const submissionHtml = (app.status === "accepted" && app.submissionLink)
-              ? `<a class="submission-link-view" href="${app.submissionLink}" target="_blank" rel="noopener">View submitted work →</a>`
+            const rawLink = app.submissionLink || "";
+            const safeLink = rawLink && !/^https?:\/\//i.test(rawLink) ? "https://" + rawLink : rawLink;
+            const submissionHtml = (app.status === "accepted" && safeLink)
+              ? `<a class="submission-link-view" href="${safeLink}" target="_blank" rel="noopener">View submitted work →</a>`
               : (app.status === "accepted" ? `<span class="empty-note" style="font-size:11.5px;">Waiting on submission</span>` : "");
             row.innerHTML = `
               <div class="applicant-info">

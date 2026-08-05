@@ -113,8 +113,10 @@
 
         let acceptedPanel = "";
         if (app.status === "accepted"){
-          const savedLink = app.submissionLink
-            ? `<p class="submission-saved">Submitted: <a href="${app.submissionLink}" target="_blank" rel="noopener">${app.submissionLink}</a></p>`
+          const rawSaved = app.submissionLink || "";
+          const safeSaved = rawSaved && !/^https?:\/\//i.test(rawSaved) ? "https://" + rawSaved : rawSaved;
+          const savedLink = safeSaved
+            ? `<p class="submission-saved">Submitted: <a href="${safeSaved}" target="_blank" rel="noopener">${safeSaved}</a></p>`
             : "";
           acceptedPanel = `
             <div class="accepted-panel">
