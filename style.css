@@ -1,23 +1,23 @@
   :root{
-    --ink: #171F33;
-    --ink-2: #212B47;
-    --ink-3: #2C395C;
-    --paper: #F1E8D0;
-    --paper-2: #E9DDBE;
-    --paper-line: #C8B98E;
-    --amber: #D9A62E;
-    --amber-dark: #B98620;
-    --sage: #5C8374;
-    --sage-dark: #476459;
-    --rust: #B8543A;
-    --text-on-ink: #F1E8D0;
-    --text-on-ink-dim: #A8AFC4;
-    --text-on-paper: #1B2333;
-    --text-on-paper-dim: #5A5540;
-    --radius: 3px;
-    --serif: 'Fraunces', serif;
-    --sans: 'IBM Plex Sans', sans-serif;
-    --mono: 'IBM Plex Mono', monospace;
+    --ink: #14162B;
+    --ink-2: #1D2044;
+    --ink-3: #2A2D5C;
+    --paper: #FFFFFF;
+    --paper-2: #F5F5FB;
+    --paper-line: #E4E4F0;
+    --amber: #FF6B4A;
+    --amber-dark: #E85536;
+    --sage: #14B8A6;
+    --sage-dark: #0D9488;
+    --rust: #DC2626;
+    --text-on-ink: #F6F6FF;
+    --text-on-ink-dim: #9A9DC7;
+    --text-on-paper: #14162B;
+    --text-on-paper-dim: #6B6E8F;
+    --radius: 12px;
+    --serif: 'Space Grotesk', sans-serif;
+    --sans: 'Inter', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
   }
 
   *{ box-sizing:border-box; }
@@ -180,7 +180,7 @@
   }
   .btn-outline:hover{ background:rgba(92,131,116,0.18); }
 
-  /* index card stack in hero */
+  /* hero card stack */
   .card-stack{
     position:relative;
     height:340px;
@@ -191,23 +191,10 @@
     background:var(--paper);
     color:var(--text-on-paper);
     border-radius:var(--radius);
-    padding:20px 20px 18px;
-    box-shadow:0 18px 34px rgba(0,0,0,0.35);
+    padding:22px 22px 20px;
+    box-shadow:0 12px 28px rgba(20,22,43,0.18);
     border:1px solid var(--paper-line);
-    background-image:
-      linear-gradient(var(--paper-line) 1px, transparent 1px);
-    background-size: 100% 22px;
-    background-position: 0 46px;
     transition:transform .25s ease, box-shadow .25s ease;
-  }
-  .idx-card::before{
-    content:"";
-    position:absolute;
-    top:14px; left:14px;
-    width:9px; height:9px;
-    border-radius:50%;
-    background:var(--ink);
-    box-shadow: inset 0 0 0 1px var(--paper-line), 0 0 0 3px var(--paper-2);
   }
   .idx-card .idx-tag{
     font-family:var(--mono);
@@ -215,7 +202,6 @@
     letter-spacing:0.06em;
     color:var(--sage-dark);
     text-transform:uppercase;
-    margin-left:24px;
   }
   .idx-card h4{
     font-family:var(--serif);
@@ -233,13 +219,13 @@
     font-family:var(--mono);
     font-size:11px;
     margin-top:12px;
-    color:var(--rust);
+    color:var(--amber-dark);
+    font-weight:600;
   }
-  .card-1{ top:0; left:10px; transform:rotate(-7deg); z-index:1; }
-  .card-2{ top:38px; left:120px; transform:rotate(4deg); z-index:2; }
-  .card-3{ top:96px; left:20px; transform:rotate(-2deg); z-index:3; }
-  .card-stack:hover .idx-card{ transform:rotate(0deg) translateY(-4px); }
-  .card-stack:hover .card-2{ transform:rotate(0deg) translateY(-10px); }
+  .card-1{ top:0; left:10px; z-index:1; }
+  .card-2{ top:38px; left:120px; z-index:2; }
+  .card-3{ top:96px; left:20px; z-index:3; }
+  .card-stack:hover .idx-card{ transform:translateY(-6px); box-shadow:0 18px 36px rgba(20,22,43,0.24); }
 
   @media (prefers-reduced-motion: reduce){
     .idx-card, .btn{ transition:none; }
@@ -333,25 +319,14 @@
     background:var(--paper);
     color:var(--text-on-paper);
     border-radius:var(--radius);
-    padding:22px 20px 20px;
+    padding:24px 22px 22px;
     border:1px solid var(--paper-line);
     position:relative;
-    transform:rotate(var(--r, 0deg));
     transition:transform .18s ease, box-shadow .18s ease;
-    box-shadow:0 6px 16px rgba(0,0,0,0.25);
+    box-shadow:0 4px 14px rgba(20,22,43,0.08);
   }
-  .task-card:hover{ transform:rotate(0deg) translateY(-3px); box-shadow:0 14px 26px rgba(0,0,0,0.32); }
-  .task-card::before{
-    content:"";
-    position:absolute;
-    top:14px; left:14px;
-    width:8px; height:8px;
-    border-radius:50%;
-    background:var(--ink);
-    box-shadow: inset 0 0 0 1px var(--paper-line), 0 0 0 3px var(--paper-2);
-  }
+  .task-card:hover{ transform:translateY(-4px); box-shadow:0 14px 28px rgba(20,22,43,0.14); }
   .task-meta{
-    margin-left:22px;
     display:flex;
     gap:8px;
     flex-wrap:wrap;
