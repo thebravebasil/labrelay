@@ -14,13 +14,14 @@
   <div class="nav-inner">
     <a class="brand" href="index.html">
       <span class="brand-mark">LabRelay</span>
-      <span class="brand-no">no. 001 — research task exchange</span>
+      <span class="brand-no">student-built</span>
     </a>
     <nav class="links">
       <a href="board.html">Browse Tasks</a>
       <a href="post.html">Post a Task</a>
       <a href="my-tasks.html">My Tasks</a>
       <a href="my-applications.html">My Applications</a>
+      <a href="devlog.html">Dev Log</a>
       <a href="about.html">About</a>
     </nav>
     <div class="nav-auth" id="navAuth"></div>
@@ -28,35 +29,12 @@
 </header>
 
 <section class="hero" id="top">
-  <div class="wrap hero-grid">
-    <div>
-      <div class="eyebrow">A research task exchange</div>
-      <h1 class="headline">Turn research busywork into <em>someone's first real project.</em></h1>
-      <p class="hero-sub">LabRelay connects professors and doctors who need help with manageable research tasks — literature reviews, data entry, survey outreach — with students who want real experience and a way in.</p>
-      <div class="cta-row">
-        <a class="btn btn-amber" href="post.html">Post a Task →</a>
-        <a class="btn btn-outline" href="board.html">Browse Open Tasks</a>
-      </div>
-    </div>
-    <div class="card-stack" aria-hidden="true">
-      <div class="idx-card card-1">
-        <span class="idx-tag">Lit. Review</span>
-        <h4>Screen 40 papers on pediatric sleep patterns</h4>
-        <p>Sort abstracts by relevance to a systematic review.</p>
-        <div class="idx-time">≈ 4 HRS · REMOTE</div>
-      </div>
-      <div class="idx-card card-2">
-        <span class="idx-tag">Data Entry</span>
-        <h4>Digitize 1980s clinic intake forms</h4>
-        <p>Transcribe scanned forms into a spreadsheet.</p>
-        <div class="idx-time">≈ 6 HRS · REMOTE</div>
-      </div>
-      <div class="idx-card card-3">
-        <span class="idx-tag">Outreach</span>
-        <h4>Recruit survey respondents for a nutrition study</h4>
-        <p>Share a screener with local community groups.</p>
-        <div class="idx-time">≈ 3 HRS · REMOTE</div>
-      </div>
+  <div class="wrap">
+    <h1 class="headline">Turn research busywork into someone's first real project.</h1>
+    <p class="hero-sub">LabRelay connects professors and doctors who need help with manageable research tasks — literature reviews, data entry, survey outreach — with students who want real experience and a way in.</p>
+    <div class="cta-row">
+      <a class="btn btn-amber" href="post.html">Post a Task</a>
+      <a class="btn btn-outline" href="board.html">Browse Open Tasks</a>
     </div>
   </div>
 </section>
@@ -131,5 +109,6 @@
   import { initNavAuth } from "./firebase-init.js";
   initNavAuth();
 </script>
+<script src="chatbot.js" defer></script>
 </body>
 </html>
