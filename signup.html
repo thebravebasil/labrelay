@@ -6,6 +6,14 @@
 <title>Sign Up — LabRelay</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="description" content="LabRelay connects researchers who need help with small tasks — literature reviews, data entry, survey outreach — with students who want real experience.">
+<meta property="og:title" content="Sign Up — LabRelay">
+<meta property="og:description" content="LabRelay connects researchers who need help with small tasks — literature reviews, data entry, survey outreach — with students who want real experience.">
+<meta property="og:image" content="https://thebravebasil.github.io/labrelay/og-image.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thebravebasil.github.io/labrelay/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -77,7 +85,7 @@
 <script type="module">
   import { auth, db, initNavAuth } from "./firebase-init.js";
   import {
-    createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider
+    createUserWithEmailAndPassword, updateProfile, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -86,14 +94,27 @@
   const form = document.getElementById("signupForm");
   const errorBox = document.getElementById("authError");
 
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   async function afterOAuthSignup(user){
     const snap = await getDoc(doc(db, "users", user.uid));
     window.location.href = snap.exists() ? "index.html" : "complete-profile.html";
   }
 
+  getRedirectResult(auth).then((result) => {
+    if (result && result.user) afterOAuthSignup(result.user);
+  }).catch((err) => {
+    console.error("Redirect sign-in failed:", err);
+  });
+
   document.getElementById("googleBtn").addEventListener("click", async () => {
+    const provider = new GoogleAuthProvider();
     try {
-      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+      if (isMobile){
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      const cred = await signInWithPopup(auth, provider);
       await afterOAuthSignup(cred.user);
     } catch (err) {
       console.error(err);
