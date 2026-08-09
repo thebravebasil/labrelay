@@ -152,6 +152,39 @@ async function loadAI() {
 }
 
 // --------------------------------------------------
+// Hard facts about LabRelay. These are answered directly,
+// WITHOUT the AI, so the model can never hallucinate wrong
+// answers about things like pricing.
+// --------------------------------------------------
+
+const FACTS = [
+  {
+    keys: ["cost", "fee", "price", "pricing", "pay", "$", "free", "charge"],
+    a: "LabRelay is completely free — no fees for researchers or students, ever."
+  },
+  {
+    keys: ["how do i post", "post a task", "researcher post"],
+    a: "Log in, then go to \"Post a Task.\" Describe the task, time estimate, and skills needed — it's live on the board right away."
+  },
+  {
+    keys: ["how do i apply", "apply for", "interested in a task"],
+    a: "Browse open tasks, click \"I'm interested,\" and write a short note on why it interests you."
+  },
+  {
+    keys: ["who made", "who built", "founder", "who created"],
+    a: "LabRelay was built by Mohammad Basil, a student in Montgomery County, MD. More on the About page."
+  },
+];
+
+function detectFact(message) {
+  const text = message.toLowerCase();
+  for (const entry of FACTS) {
+    if (entry.keys.some(k => text.includes(k))) return entry.a;
+  }
+  return null;
+}
+
+// --------------------------------------------------
 // Redirect detection (deterministic, not AI-driven —
 // keeps navigation safe and instant)
 // --------------------------------------------------
@@ -210,6 +243,14 @@ async function handleMessage(event) {
     return;
   }
 
+  // Core facts (pricing, how things work) are answered directly,
+  // never by the AI, so they can't be hallucinated.
+  const fact = detectFact(message);
+  if (fact) {
+    addMessage(fact, "bot");
+    return;
+  }
+
   if (!engine) {
     if (loading) {
       addMessage("I'm still loading. The first load can take a little while since the model has to download — after that it's cached by the browser.", "bot");
@@ -227,7 +268,7 @@ async function handleMessage(event) {
       messages: [
         {
           role: "system",
-          content: `You are LabRelay AI. LabRelay is a research task exchange connecting researchers (professors, doctors) with students who want practical research experience. Researchers post manageable tasks; students browse and apply. Be concise and friendly. Do not invent LabRelay features or claim you completed an action the website didn't actually do. If someone wants to browse tasks, mention the Browse Tasks page. If someone wants to post a task, mention Post a Task. Keep answers under 100 words.`
+          content: `You are LabRelay AI. LabRelay is a research task exchange connecting researchers (professors, doctors) with students who want practical research experience. Researchers post manageable tasks; students browse and apply. LabRelay is 100% free — there is no fee of any kind, for anyone, ever. Be concise and friendly. Do not invent LabRelay features, pages, or fees that don't exist. Never claim you completed an action the website didn't actually do. If someone wants to browse tasks, mention the Browse Tasks page. If someone wants to post a task, mention Post a Task. Keep answers under 100 words.`
         },
         { role: "user", content: message }
       ],
