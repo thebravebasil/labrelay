@@ -66,6 +66,7 @@
   <div class="wrap footer-inner">
     <span>LabRelay — a research task exchange · v1</span>
     <span>© 2026 Mohammad Basil</span>
+    <a href="mailto:mobasil2023@gmail.com?subject=LabRelay%20feedback" style="color:var(--text-on-ink-dim); text-decoration:underline;">Found a bug? Send feedback</a>
   </div>
 </footer>
 
@@ -92,7 +93,7 @@
 
   const q = query(tasksCol, orderBy("createdAt", "desc"));
   onSnapshot(q, (snapshot) => {
-    const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => t.status !== "filled");
     renderTasks(docs);
   }, (err) => {
     console.error("Firestore read failed:", err);

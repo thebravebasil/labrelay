@@ -53,10 +53,52 @@
   </div>
 </section>
 
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <h3>Edit task</h3>
+    <p class="modal-sub">Update the details below.</p>
+    <div class="field">
+      <label for="e-title">Task title</label>
+      <input id="e-title" type="text">
+    </div>
+    <div class="field">
+      <label for="e-desc">Description</label>
+      <textarea id="e-desc"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="e-time">Estimated time</label>
+        <select id="e-time">
+          <option>1–2 hrs</option>
+          <option>3–5 hrs</option>
+          <option>5–10 hrs</option>
+          <option>10+ hrs / ongoing</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="e-tags">Skills (comma-separated)</label>
+        <input id="e-tags" type="text">
+      </div>
+    </div>
+    <div class="field">
+      <label>Where?</label>
+      <div class="radio-row">
+        <label><input type="radio" name="e-loc" value="Remote"> Remote</label>
+        <label><input type="radio" name="e-loc" value="In-person"> In-person</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" id="editCancel">Cancel</button>
+      <button type="button" class="btn btn-amber" id="editSave">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   <div class="wrap footer-inner">
     <span>LabRelay — a research task exchange · v1</span>
     <span>© 2026 Mohammad Basil</span>
+    <a href="mailto:mobasil2023@gmail.com?subject=LabRelay%20feedback" style="color:var(--text-on-ink-dim); text-decoration:underline;">Found a bug? Send feedback</a>
   </div>
 </footer>
 
@@ -64,7 +106,7 @@
   import { db, auth, initNavAuth } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    collection, query, where, orderBy, onSnapshot, doc, updateDoc
+    collection, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   initNavAuth();
@@ -72,6 +114,32 @@
   const gate = document.getElementById("gate");
   const taskList = document.getElementById("taskList");
   const activeAppListeners = [];
+
+  const editModal = document.getElementById("editModal");
+  let editingTaskId = null;
+
+  document.getElementById("editCancel").addEventListener("click", () => editModal.classList.remove("show"));
+  editModal.addEventListener("click", (e) => { if (e.target === editModal) editModal.classList.remove("show"); });
+
+  document.getElementById("editSave").addEventListener("click", async () => {
+    if (!editingTaskId) return;
+    const title = document.getElementById("e-title").value.trim();
+    const desc = document.getElementById("e-desc").value.trim();
+    const time = document.getElementById("e-time").value;
+    const tagsRaw = document.getElementById("e-tags").value.trim();
+    const loc = document.querySelector('input[name="e-loc"]:checked').value;
+
+    try {
+      await updateDoc(doc(db, "tasks", editingTaskId), {
+        title, desc, time, loc,
+        tags: tagsRaw ? tagsRaw.split(",").map(s => s.trim()).filter(Boolean) : []
+      });
+      editModal.classList.remove("show");
+    } catch (err) {
+      console.error("Failed to save edits:", err);
+      alert("Couldn't save changes. Please try again.");
+    }
+  });
 
   onAuthStateChanged(auth, (user) => {
     activeAppListeners.forEach(unsub => unsub());
@@ -103,17 +171,47 @@
       snapshot.docs.forEach(taskDoc => {
         const task = taskDoc.data();
         const taskId = taskDoc.id;
+        const isFilled = task.status === "filled";
 
         const card = document.createElement("div");
         card.className = "mytask-card";
         card.innerHTML = `
-          <h3>${task.title}</h3>
-          <div class="mytask-meta">${task.tag || ""} · ${task.time} · ${task.loc}</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+            <div>
+              <h3>${task.title} ${isFilled ? '<span class="status-badge status-accepted" style="margin-left:8px; vertical-align:middle;">Filled</span>' : ''}</h3>
+              <div class="mytask-meta">${task.tag || ""} · ${task.time} · ${task.loc}</div>
+            </div>
+            <div class="applicant-actions">
+              <button type="button" class="btn-ghost" data-action="toggle">${isFilled ? "Reopen" : "Mark filled"}</button>
+              <button type="button" class="btn-ghost" data-action="edit">Edit</button>
+              <button type="button" class="btn-ghost" data-action="delete" style="color:var(--rust);">Delete</button>
+            </div>
+          </div>
           <div class="applicant-list" id="applicants-${taskId}">
             <p class="empty-note">Loading applicants…</p>
           </div>
         `;
         taskList.appendChild(card);
+
+        card.querySelector('[data-action="toggle"]').addEventListener("click", () => {
+          updateDoc(doc(db, "tasks", taskId), { status: isFilled ? "open" : "filled" });
+        });
+
+        card.querySelector('[data-action="delete"]').addEventListener("click", () => {
+          if (confirm(`Delete "${task.title}"? This can't be undone.`)) {
+            deleteDoc(doc(db, "tasks", taskId));
+          }
+        });
+
+        card.querySelector('[data-action="edit"]').addEventListener("click", async () => {
+          editingTaskId = taskId;
+          document.getElementById("e-title").value = task.title || "";
+          document.getElementById("e-desc").value = task.desc || "";
+          document.getElementById("e-time").value = task.time || "1–2 hrs";
+          document.getElementById("e-tags").value = Array.isArray(task.tags) ? task.tags.join(", ") : "";
+          document.querySelectorAll('input[name="e-loc"]').forEach(r => { r.checked = (r.value === task.loc); });
+          editModal.classList.add("show");
+        });
 
         const appsCol = collection(db, "tasks", taskId, "applications");
         const appsQ = query(appsCol, orderBy("createdAt", "desc"));
@@ -154,6 +252,7 @@
             if (app.status === "pending"){
               row.querySelector(".btn-accept").addEventListener("click", () => {
                 updateDoc(doc(db, "tasks", taskId, "applications", appId), { status: "accepted" });
+                updateDoc(doc(db, "tasks", taskId), { status: "filled" });
               });
               row.querySelector(".btn-decline").addEventListener("click", () => {
                 updateDoc(doc(db, "tasks", taskId, "applications", appId), { status: "declined" });
