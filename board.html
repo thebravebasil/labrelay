@@ -47,6 +47,23 @@
 
 <section class="board" style="padding-top:56px;">
   <div class="wrap">
+    <div class="filter-bar">
+      <input type="text" id="filterSearch" placeholder="Search by title or skill…">
+      <select id="filterTime">
+        <option value="">Any time commitment</option>
+        <option value="1–2 hrs">1–2 hrs</option>
+        <option value="3–5 hrs">3–5 hrs</option>
+        <option value="5–10 hrs">5–10 hrs</option>
+        <option value="10+ hrs / ongoing">10+ hrs / ongoing</option>
+      </select>
+      <select id="filterLoc">
+        <option value="">Remote or in-person</option>
+        <option value="Remote">Remote</option>
+        <option value="In-person">In-person</option>
+      </select>
+      <button type="button" class="btn-ghost" id="filterClear">Clear</button>
+    </div>
+    <p class="empty-note" id="filterCount" style="margin-bottom:18px;"></p>
     <div class="task-grid" id="taskGrid"></div>
   </div>
 </section>
@@ -92,19 +109,63 @@
 
   grid.innerHTML = '<p class="empty-note">Loading tasks…</p>';
 
+  let allTasks = [];
+  const searchInput = document.getElementById("filterSearch");
+  const timeSelect = document.getElementById("filterTime");
+  const locSelect = document.getElementById("filterLoc");
+  const clearBtn = document.getElementById("filterClear");
+  const filterCount = document.getElementById("filterCount");
+
   const q = query(tasksCol, orderBy("createdAt", "desc"));
   onSnapshot(q, (snapshot) => {
-    const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => t.status !== "filled");
-    renderTasks(docs);
+    allTasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => t.status !== "filled");
+    applyFilters();
   }, (err) => {
     console.error("Firestore read failed:", err);
     grid.innerHTML = '<p class="empty-note">Couldn\'t load tasks right now — check back soon.</p>';
   });
 
+  function applyFilters(){
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    const timeVal = timeSelect.value;
+    const locVal = locSelect.value;
+
+    const filtered = allTasks.filter(t => {
+      if (timeVal && t.time !== timeVal) return false;
+      if (locVal && t.loc !== locVal) return false;
+      if (searchTerm){
+        const tagsArr = Array.isArray(t.tags) ? t.tags : [];
+        const haystack = [t.title, t.desc, ...tagsArr].join(" ").toLowerCase();
+        if (!haystack.includes(searchTerm)) return false;
+      }
+      return true;
+    });
+
+    const anyFilterActive = searchTerm || timeVal || locVal;
+    filterCount.textContent = anyFilterActive
+      ? `Showing ${filtered.length} of ${allTasks.length} tasks`
+      : "";
+
+    renderTasks(filtered);
+  }
+
+  searchInput.addEventListener("input", applyFilters);
+  timeSelect.addEventListener("change", applyFilters);
+  locSelect.addEventListener("change", applyFilters);
+  clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    timeSelect.value = "";
+    locSelect.value = "";
+    applyFilters();
+  });
+
   function renderTasks(docs){
     grid.innerHTML = "";
     if (docs.length === 0){
-      grid.innerHTML = '<p class="empty-note">No open tasks right now — check back soon.</p>';
+      const anyFilterActive = searchInput.value.trim() || timeSelect.value || locSelect.value;
+      grid.innerHTML = anyFilterActive
+        ? '<p class="empty-note">No tasks match your filters — try clearing them.</p>'
+        : '<p class="empty-note">No open tasks right now — check back soon.</p>';
       return;
     }
     docs.forEach(t => {

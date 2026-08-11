@@ -1151,3 +1151,38 @@ section.auth{
 .site-toast.show{ opacity:1; transform:translateY(0); }
 .site-toast.info{ background:var(--sage); }
 .site-toast.error{ background:var(--rust); }
+
+/* ---------- BOARD FILTERS ---------- */
+.filter-bar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:20px;
+}
+.filter-bar input[type="text"]{
+  flex:1;
+  min-width:200px;
+  font-family:var(--sans);
+  font-size:14px;
+  padding:10px 14px;
+  border:1px solid var(--paper-line);
+  border-radius:var(--radius);
+  background:var(--paper);
+  color:var(--text-on-paper);
+}
+.filter-bar select{
+  font-family:var(--sans);
+  font-size:14px;
+  padding:10px 14px;
+  border:1px solid var(--paper-line);
+  border-radius:var(--radius);
+  background:var(--paper);
+  color:var(--text-on-paper);
+  cursor:pointer;
+}
+.filter-bar .btn-ghost{
+  padding:10px 16px;
+}
+@media (max-width: 600px){
+  .filter-bar input[type="text"]{ flex-basis:100%; }
+}
