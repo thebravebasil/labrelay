@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile — LabRelay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">LabRelay</span>
+      <span class="brand-no">student-built</span>
+    </a>
+    <nav class="links">
+      <a href="board.html">Browse Tasks</a>
+      <a href="post.html">Post a Task</a>
+      <a href="my-tasks.html">My Tasks</a>
+      <a href="my-applications.html">My Applications</a>
+      <a href="devlog.html">Dev Log</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div class="nav-auth" id="navAuth"></div>
+  </div>
+</header>
+
+<div class="page-header">
+  <div class="wrap">
+    <div class="section-label">Account</div>
+    <h1 class="section-title">My profile</h1>
+    <p>Update your display name or switch between student and researcher.</p>
+  </div>
+</div>
+
+<section class="post" style="padding-top:50px;">
+  <div class="wrap">
+    <div id="gate" class="gate-note" style="display:none;">
+      You need to be logged in to see this. <a href="login.html">Log in</a> or <a href="signup.html">sign up</a>.
+    </div>
+
+    <form class="task-form" id="profileForm" style="display:none; max-width:480px;">
+      <div class="field">
+        <label for="p-email">Email</label>
+        <input id="p-email" type="text" disabled style="opacity:0.6;">
+      </div>
+      <div class="field">
+        <label for="p-name">Display name</label>
+        <input id="p-name" type="text" required>
+      </div>
+      <div class="field">
+        <label>I am a</label>
+        <div class="radio-row">
+          <label><input type="radio" name="p-role" value="Student"> Student</label>
+          <label><input type="radio" name="p-role" value="Researcher"> Researcher / Doctor</label>
+        </div>
+      </div>
+      <p class="form-note">Changing your role only affects how you're described — it won't move or delete anything you've already posted or applied to.</p>
+      <button class="btn btn-amber" type="submit">Save changes</button>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>LabRelay — a research task exchange · v1</span>
+    <span>© 2026 Mohammad Basil</span>
+    <a href="mailto:mobasil2023@gmail.com?subject=LabRelay%20feedback" style="color:var(--text-on-ink-dim); text-decoration:underline;">Found a bug? Send feedback</a>
+  </div>
+</footer>
+
+<script type="module">
+  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  initNavAuth();
+
+  const gate = document.getElementById("gate");
+  const form = document.getElementById("profileForm");
+  let currentUid = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user){
+      gate.style.display = "block";
+      form.style.display = "none";
+      return;
+    }
+    gate.style.display = "none";
+    form.style.display = "block";
+    currentUid = user.uid;
+
+    document.getElementById("p-email").value = user.email;
+
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (snap.exists()){
+        const data = snap.data();
+        document.getElementById("p-name").value = data.name || "";
+        document.querySelectorAll('input[name="p-role"]').forEach(r => {
+          r.checked = (r.value === data.role);
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+      showToast("Couldn't load your profile. Please refresh and try again.", "error");
+    }
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!currentUid) return;
+
+    const name = document.getElementById("p-name").value.trim();
+    const roleInput = document.querySelector('input[name="p-role"]:checked');
+    if (!name || !roleInput) return;
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving…";
+
+    try {
+      await updateDoc(doc(db, "users", currentUid), { name, role: roleInput.value });
+      showToast("Profile updated.");
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+      showToast("Couldn't save your changes. Please try again.", "error");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Save changes";
+    }
+  });
+</script>
+<script type="module" src="chatbot.js"></script>
+</body>
+</html>

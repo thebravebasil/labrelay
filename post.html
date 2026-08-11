@@ -102,7 +102,7 @@
 </footer>
 
 <script type="module">
-  import { db, auth, initNavAuth } from "./firebase-init.js";
+  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -160,7 +160,7 @@
       setTimeout(() => { window.location.href = "board.html"; }, 1200);
     } catch (err) {
       console.error("Failed to post task:", err);
-      alert("Something went wrong posting this task. Please try again.");
+      showToast("Something went wrong posting this task. Please try again.", "error");
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = "Post task";

@@ -104,7 +104,7 @@
 </footer>
 
 <script type="module">
-  import { db, auth, initNavAuth } from "./firebase-init.js";
+  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     collection, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc
@@ -121,6 +121,9 @@
 
   document.getElementById("editCancel").addEventListener("click", () => editModal.classList.remove("show"));
   editModal.addEventListener("click", (e) => { if (e.target === editModal) editModal.classList.remove("show"); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && editModal.classList.contains("show")) editModal.classList.remove("show");
+  });
 
   document.getElementById("editSave").addEventListener("click", async () => {
     if (!editingTaskId) return;
@@ -138,7 +141,7 @@
       editModal.classList.remove("show");
     } catch (err) {
       console.error("Failed to save edits:", err);
-      alert("Couldn't save changes. Please try again.");
+      showToast("Couldn't save changes. Please try again.", "error");
     }
   });
 
@@ -212,6 +215,7 @@
           document.getElementById("e-tags").value = Array.isArray(task.tags) ? task.tags.join(", ") : "";
           document.querySelectorAll('input[name="e-loc"]').forEach(r => { r.checked = (r.value === task.loc); });
           editModal.classList.add("show");
+          setTimeout(() => document.getElementById("e-title").focus(), 50);
         });
 
         const appsCol = collection(db, "tasks", taskId, "applications");

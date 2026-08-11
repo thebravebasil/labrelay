@@ -63,7 +63,7 @@
 </footer>
 
 <script type="module">
-  import { db, auth, initNavAuth } from "./firebase-init.js";
+  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     collectionGroup, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc
@@ -181,7 +181,7 @@
             input.value = link;
           } catch (err) {
             console.error("Failed to save submission link:", err);
-            alert("Couldn't save that link. Please try again.");
+            showToast("Couldn't save that link. Please try again.", "error");
           } finally {
             btn.disabled = false;
             btn.textContent = "Save link";

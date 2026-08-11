@@ -541,7 +541,9 @@
 .nav-auth a:hover{ color:var(--text-on-ink); }
 .nav-user{
   color:var(--text-on-ink-dim);
+  text-decoration:none;
 }
+.nav-user:hover{ color:var(--amber); }
 .nav-user strong{ color:var(--text-on-ink); }
 .btn-mini{
   background:var(--amber);
@@ -1123,3 +1125,29 @@ section.auth{
   margin-top:16px;
   line-height:1.5;
 }
+
+/* ---------- SHARED TOAST NOTIFICATIONS ---------- */
+#toastStack{
+  position:fixed;
+  bottom:24px;
+  left:24px;
+  z-index:500;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  max-width:340px;
+}
+.site-toast{
+  font-family:var(--sans);
+  font-size:13.5px;
+  padding:13px 16px;
+  border-radius:var(--radius);
+  color:#fff;
+  box-shadow:0 8px 22px rgba(20,23,46,0.2);
+  opacity:0;
+  transform:translateY(8px);
+  transition:opacity .2s ease, transform .2s ease;
+}
+.site-toast.show{ opacity:1; transform:translateY(0); }
+.site-toast.info{ background:var(--sage); }
+.site-toast.error{ background:var(--rust); }

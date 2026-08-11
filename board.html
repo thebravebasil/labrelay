@@ -72,7 +72,7 @@
 </footer>
 
 <script type="module">
-  import { db, auth, initNavAuth } from "./firebase-init.js";
+  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
   import {
     collection, query, orderBy, onSnapshot, addDoc, doc, getDoc, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -124,12 +124,12 @@
       `;
       card.querySelector(".link-btn").addEventListener("click", () => {
         if (!auth.currentUser){
-          alert("Please log in or sign up first so the researcher knows who's applying.");
+          showToast("Please log in or sign up first so the researcher knows who's applying.", "error");
           window.location.href = "login.html";
           return;
         }
         if (auth.currentUser.uid === t.createdBy){
-          alert("This is your own task — you can't apply to it.");
+          showToast("This is your own task — you can't apply to it.", "error");
           return;
         }
         activeTaskId = t.id;
@@ -137,6 +137,7 @@
         modalTitle.textContent = `Apply: ${t.title}`;
         noteBox.value = "";
         modal.classList.add("show");
+        setTimeout(() => noteBox.focus(), 50);
       });
       grid.appendChild(card);
     });
@@ -144,6 +145,9 @@
 
   applyCancel.addEventListener("click", () => modal.classList.remove("show"));
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("show"); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("show")) modal.classList.remove("show");
+  });
 
   applySubmit.addEventListener("click", async () => {
     if (!activeTaskId || !auth.currentUser) return;
@@ -168,10 +172,10 @@
       });
 
       modal.classList.remove("show");
-      alert("Application sent! The researcher will reach out if it's a fit.");
+      showToast("Application sent! The researcher will reach out if it's a fit.");
     } catch (err) {
       console.error("Failed to send application:", err);
-      alert("Something went wrong sending your application. Please try again.");
+      showToast("Something went wrong sending your application. Please try again.", "error");
     } finally {
       applySubmit.disabled = false;
       applySubmit.textContent = "Send application";
