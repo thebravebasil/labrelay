@@ -120,6 +120,22 @@
         </select>
       </div>
     </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="e-data">Data sensitivity</label>
+        <select id="e-data">
+          <option value="Public / non-sensitive">Public / non-sensitive</option>
+          <option value="De-identified / approved">De-identified / approved</option>
+        </select>
+        <p class="form-note">Do not use LabRelay for patient-identifying, private, or confidential data.</p>
+      </div>
+      <div class="field" style="display:flex; align-items:flex-end;">
+        <label class="form-note" style="display:flex; gap:10px; align-items:flex-start; margin-bottom:0;">
+          <input id="e-safe" type="checkbox" style="margin-top:3px;">
+          <span>I confirm this task does not require access to patient-identifying, private, or confidential data.</span>
+        </label>
+      </div>
+    </div>
     <div class="modal-actions">
       <button type="button" class="btn-ghost" id="editCancel">Cancel</button>
       <button type="button" class="btn btn-amber" id="editSave">Save changes</button>
@@ -150,6 +166,7 @@
 
   const editModal = document.getElementById("editModal");
   let editingTaskId = null;
+  let currentVerificationStatus = "unverified";
 
   document.getElementById("editCancel").addEventListener("click", () => editModal.classList.remove("show"));
   editModal.addEventListener("click", (e) => { if (e.target === editModal) editModal.classList.remove("show"); });
@@ -164,6 +181,13 @@
     const time = document.getElementById("e-time").value;
     const tagsRaw = document.getElementById("e-tags").value.trim();
     const loc = document.querySelector('input[name="e-loc"]:checked').value;
+    const dataSensitivity = document.getElementById("e-data").value;
+    const safetyConfirmed = document.getElementById("e-safe").checked;
+
+    if (!safetyConfirmed){
+      showToast("Please confirm that this task does not require private or patient-identifying data.", "error");
+      return;
+    }
 
     try {
       await updateDoc(doc(db, "tasks", editingTaskId), {
@@ -173,6 +197,9 @@
         topic: document.getElementById("e-topic").value.trim(),
         supervision: document.getElementById("e-supervision").value,
         eligibility: document.getElementById("e-eligibility").value,
+        dataSensitivity,
+        safetyConfirmed,
+        researcherVerification: currentVerificationStatus,
         tags: tagsRaw ? tagsRaw.split(",").map(s => s.trim()).filter(Boolean) : []
       });
       editModal.classList.remove("show");
@@ -182,7 +209,7 @@
     }
   });
 
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     activeAppListeners.forEach(unsub => unsub());
     activeAppListeners.length = 0;
 
@@ -191,6 +218,17 @@
       taskList.innerHTML = "";
       return;
     }
+
+    try {
+      const profileSnap = await getDoc(doc(db, "users", user.uid));
+      currentVerificationStatus = profileSnap.exists()
+        ? (profileSnap.data().verificationStatus || "unverified")
+        : "unverified";
+    } catch (err) {
+      console.warn("Could not load verification status:", err);
+      currentVerificationStatus = "unverified";
+    }
+
     gate.style.display = "none";
     loadMyTasks(user.uid);
   });
@@ -234,8 +272,18 @@
         `;
         taskList.appendChild(card);
 
-        card.querySelector('[data-action="toggle"]').addEventListener("click", () => {
-          updateDoc(doc(db, "tasks", taskId), { status: isFilled ? "open" : "filled" });
+        card.querySelector('[data-action="toggle"]').addEventListener("click", async () => {
+          try {
+            await updateDoc(doc(db, "tasks", taskId), {
+              status: isFilled ? "open" : "filled",
+              safetyConfirmed: task.safetyConfirmed === undefined ? true : task.safetyConfirmed === true,
+              dataSensitivity: task.dataSensitivity || "Public / non-sensitive",
+              researcherVerification: currentVerificationStatus
+            });
+          } catch (err) {
+            console.error("Failed to update task status:", err);
+            showToast("Couldn't update the task status. Please try again.", "error");
+          }
         });
 
         card.querySelector('[data-action="delete"]').addEventListener("click", () => {
@@ -254,6 +302,8 @@
           document.getElementById("e-topic").value = task.topic || "";
           document.getElementById("e-supervision").value = task.supervision || "Researcher-supervised";
           document.getElementById("e-eligibility").value = task.eligibility || "Student-friendly";
+          document.getElementById("e-data").value = task.dataSensitivity || "Public / non-sensitive";
+          document.getElementById("e-safe").checked = task.safetyConfirmed !== false;
           document.querySelectorAll('input[name="e-loc"]').forEach(r => { r.checked = (r.value === task.loc); });
           editModal.classList.add("show");
           setTimeout(() => document.getElementById("e-title").focus(), 50);
@@ -295,9 +345,19 @@
               </div>
             `;
             if (app.status === "pending"){
-              row.querySelector(".btn-accept").addEventListener("click", () => {
-                updateDoc(doc(db, "tasks", taskId, "applications", appId), { status: "accepted" });
-                updateDoc(doc(db, "tasks", taskId), { status: "filled" });
+              row.querySelector(".btn-accept").addEventListener("click", async () => {
+                try {
+                  await updateDoc(doc(db, "tasks", taskId, "applications", appId), { status: "accepted" });
+                  await updateDoc(doc(db, "tasks", taskId), {
+                    status: "filled",
+                    safetyConfirmed: task.safetyConfirmed === undefined ? true : task.safetyConfirmed === true,
+                    dataSensitivity: task.dataSensitivity || "Public / non-sensitive",
+                    researcherVerification: currentVerificationStatus
+                  });
+                } catch (err) {
+                  console.error("Failed to accept application:", err);
+                  showToast("Couldn't accept this application. Please try again.", "error");
+                }
               });
               row.querySelector(".btn-decline").addEventListener("click", () => {
                 updateDoc(doc(db, "tasks", taskId, "applications", appId), { status: "declined" });

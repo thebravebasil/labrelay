@@ -186,3 +186,12 @@ Not yet. In the future, we may add PI-level accounts that manage multiple users.
 ---
 
 Made with ❤️ by a student, for students and researchers.
+
+## Firebase deployment order
+
+1. Upload the updated site files.
+2. Test sign-in, task posting, task editing, applications, and My Applications.
+3. Back up the current Firestore rules.
+4. Paste the rules from `FIRESTORE_RULES_RECOMMENDED.md`.
+5. Use Firebase Rules Playground to test reads and writes.
+6. Publish only after the tests pass.

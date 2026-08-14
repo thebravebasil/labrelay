@@ -1,21 +1,16 @@
-# LabRelay Change Log
+# LabRelay Changelog
 
-## August 14, 2026 — Roadmap-aligned safety/product pass
+## Next safety pass — August 2026
 
-### Added
-- Structured task difficulty, topic, supervision, eligibility, and data-sensitivity fields.
-- Safety confirmation when posting a task.
-- Researcher verification status (`unverified` by default).
-- School/lab/organization, skills, research interests, and availability fields on profiles.
-- Board filters for difficulty and eligibility.
-- Trust and safety labels on task cards.
-- Duplicate-application prevention.
-- Recommended Firestore Rules reference.
+### Fixed
+- Fixed the task-posting page's missing Firestore `doc` / `getDoc` imports.
+- Made existing task editing and status changes compatible with the new safety fields.
+- Added data-sensitivity and safety confirmation controls to task editing.
+- Added server-enforced researcher verification consistency to the recommended Firestore rules.
+- Added a collection-group rule required by the My Applications page.
+- Prevented task owners from applying to their own tasks at the Firestore layer.
+- Limited application updates so students can only change their submission link and researchers can only change application status.
+- Kept verification status protected from browser-side promotion.
 
-### Security improvements
-- Added shared HTML escaping for database-sourced text rendered into HTML.
-- Added URL validation for submission links.
-- Escaped applicant, profile, task, and submission content before HTML insertion.
-
-### Product direction
-This pass prioritizes safety, trust, structured opportunities, and secure foundations before adding more advanced AI features.
+### Important deployment note
+Do not publish the recommended Firestore rules until the updated site files have been deployed and the rules have been tested with a student account and a researcher account.
