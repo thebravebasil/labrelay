@@ -9,7 +9,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta name="description" content="LabRelay connects researchers who need help with small tasks — literature reviews, data entry, survey outreach — with students who want real experience.">
 <meta property="og:title" content="Browse Tasks — LabRelay">
-<meta property="og:description" content="LabRelay connects researchers who need help with small tasks — literature reviews, data entry, survey outreach — with students who want real experience.">
+<meta property="og:description" content="LabRelay connects researchers who need help with small tasks — literature reviews, data entry, survey outreach — with students who want real experience[...]
 <meta property="og:image" content="https://thebravebasil.github.io/labrelay/og-image.png">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://thebravebasil.github.io/labrelay/">
@@ -116,6 +116,15 @@
   const clearBtn = document.getElementById("filterClear");
   const filterCount = document.getElementById("filterCount");
 
+  // Debounce utility to reduce filter re-renders on every keystroke
+  function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
   const q = query(tasksCol, orderBy("createdAt", "desc"));
   onSnapshot(q, (snapshot) => {
     allTasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => t.status !== "filled");
@@ -149,7 +158,9 @@
     renderTasks(filtered);
   }
 
-  searchInput.addEventListener("input", applyFilters);
+  // Debounced search to avoid excessive re-renders
+  const debouncedApplyFilters = debounce(applyFilters, 300);
+  searchInput.addEventListener("input", debouncedApplyFilters);
   timeSelect.addEventListener("change", applyFilters);
   locSelect.addEventListener("change", applyFilters);
   clearBtn.addEventListener("click", () => {
@@ -168,6 +179,10 @@
         : '<p class="empty-note">No open tasks right now — check back soon.</p>';
       return;
     }
+
+    // Use DocumentFragment to batch DOM insertions into a single operation
+    const fragment = document.createDocumentFragment();
+
     docs.forEach(t => {
       const card = document.createElement("div");
       card.className = "task-card";
@@ -200,8 +215,11 @@
         modal.classList.add("show");
         setTimeout(() => noteBox.focus(), 50);
       });
-      grid.appendChild(card);
+      fragment.appendChild(card);
     });
+
+    // Single DOM insertion instead of multiple appends
+    grid.appendChild(fragment);
   }
 
   applyCancel.addEventListener("click", () => modal.classList.remove("show"));
