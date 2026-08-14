@@ -104,6 +104,7 @@
   const gate = document.getElementById("gate");
   const form = document.getElementById("profileForm");
   let currentUid = null;
+  let currentVerificationStatus = "unverified";
 
   onAuthStateChanged(auth, async (user) => {
     if (!user){
@@ -126,7 +127,8 @@
         document.getElementById("p-skills").value = Array.isArray(data.skills) ? data.skills.join(", ") : "";
         document.getElementById("p-interests").value = Array.isArray(data.interests) ? data.interests.join(", ") : "";
         document.getElementById("p-availability").value = data.availability || "";
-        document.getElementById("p-verification").textContent = (data.verificationStatus || "unverified").replace(/^\w/, c => c.toUpperCase());
+        currentVerificationStatus = data.verificationStatus || "unverified";
+        document.getElementById("p-verification").textContent = currentVerificationStatus.replace(/^\w/, c => c.toUpperCase());
         document.querySelectorAll('input[name="p-role"]').forEach(r => {
           r.checked = (r.value === data.role);
         });
@@ -160,7 +162,8 @@
         affiliation,
         skills: skillsRaw ? skillsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
         interests: interestsRaw ? interestsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
-        availability
+        availability,
+        verificationStatus: currentVerificationStatus
       });
       showToast("Profile updated.");
     } catch (err) {
