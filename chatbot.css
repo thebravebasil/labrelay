@@ -9,7 +9,7 @@
   width: 56px;
   height: 56px;
   border: none;
-  border-radius: 14px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #8F98FF 0%, #6B7FD9 100%);
   color: white;
   font-size: 22px;
