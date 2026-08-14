@@ -25,6 +25,27 @@ try { getAnalytics(app); } catch (e) { /* analytics can fail silently, e.g. ad-b
 
 // Shows a small toast notification, bottom-left, instead of a browser alert().
 // type is "info" (default, sage green) or "error" (red).
+export function safeHttpUrl(value = "") {
+  const raw = String(value).trim();
+  if (!raw) return "";
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(candidate);
+    return (url.protocol === "http:" || url.protocol === "https:") ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+export function escapeHTML(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/\'/g, "&#039;");
+}
+
 export function showToast(message, type = "info"){
   let stack = document.getElementById("toastStack");
   if (!stack){
@@ -59,7 +80,7 @@ export function initNavAuth(){
       if (snap.exists() && snap.data().name) name = snap.data().name;
     } catch (e) { /* fine, fall back to email */ }
 
-    el.innerHTML = `<a href="profile.html" class="nav-user">Hi, <strong>${name}</strong></a><button class="link-btn-inv" id="logoutBtn" type="button">Log out</button>`;
+    el.innerHTML = `<a href="profile.html" class="nav-user">Hi, <strong>${escapeHTML(name)}</strong></a><button class="link-btn-inv" id="logoutBtn" type="button">Log out</button>`;
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       await signOut(auth);
       window.location.href = "index.html";

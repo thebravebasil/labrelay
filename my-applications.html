@@ -63,7 +63,7 @@
 </footer>
 
 <script type="module">
-  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
+  import { db, auth, initNavAuth, showToast, escapeHTML, safeHttpUrl } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     collectionGroup, query, where, orderBy, onSnapshot, doc, getDoc, updateDoc
@@ -114,8 +114,8 @@
           const taskSnap = await getDoc(taskRef);
           if (taskSnap.exists()){
             const t = taskSnap.data();
-            taskTitle = t.title;
-            taskMeta = `${t.tag || ""} · ${t.time} · ${t.loc}`;
+            taskTitle = t.title || "Untitled task";
+            taskMeta = `${t.level || t.tag || "Task"} · ${t.time || ""} · ${t.loc || "Remote"}`;
             researcherEmail = t.createdByEmail || "";
           }
         } catch (e) { /* task may have been removed */ }
@@ -124,18 +124,17 @@
 
         let acceptedPanel = "";
         if (app.status === "accepted"){
-          const rawSaved = app.submissionLink || "";
-          const safeSaved = rawSaved && !/^https?:\/\//i.test(rawSaved) ? "https://" + rawSaved : rawSaved;
+          const safeSaved = safeHttpUrl(app.submissionLink || "");
           const savedLink = safeSaved
-            ? `<p class="submission-saved">Submitted: <a href="${safeSaved}" target="_blank" rel="noopener">${safeSaved}</a></p>`
+            ? `<p class="submission-saved">Submitted: <a href="${escapeHTML(safeSaved)}" target="_blank" rel="noopener">${escapeHTML(safeSaved)}</a></p>`
             : "";
           acceptedPanel = `
             <div class="accepted-panel">
               <p class="contact-line">You're in! Email your finished work directly to
-                <a href="mailto:${researcherEmail}?subject=${encodeURIComponent("LabRelay task: " + taskTitle)}">${researcherEmail}</a>.
+                <a href="mailto:${escapeHTML(researcherEmail)}?subject=${encodeURIComponent("LabRelay task: " + taskTitle)}">${escapeHTML(researcherEmail)}</a>.
               </p>
               <div class="submit-row" data-app-id="${appId}" data-task-id="${taskId}">
-                <input type="text" class="submission-input" placeholder="Paste a link to your finished work (with or without https://)" value="${app.submissionLink || ""}">
+                <input type="text" class="submission-input" placeholder="Paste a link to your finished work (with or without https://)" value="${escapeHTML(app.submissionLink || "")}">
                 <button type="button" class="btn-save-link">Save link</button>
               </div>
               ${savedLink}
@@ -145,11 +144,11 @@
 
         return `
           <div class="mytask-card">
-            <h3>${taskTitle}</h3>
-            <div class="mytask-meta">${taskMeta}</div>
+            <h3>${escapeHTML(taskTitle)}</h3>
+            <div class="mytask-meta">${escapeHTML(taskMeta)}</div>
             <div class="applicant-row" style="background:none; padding:0;">
               <div class="applicant-info">
-                <p class="applicant-note">${app.note ? app.note : "<em>No note included.</em>"}</p>
+                <p class="applicant-note">${app.note ? escapeHTML(app.note) : "<em>No note included.</em>"}</p>
               </div>
               <div class="applicant-actions">
                 <span class="status-badge ${statusClass}">${app.status}</span>
@@ -169,10 +168,10 @@
         const input = row.querySelector(".submission-input");
         const btn = row.querySelector(".btn-save-link");
         btn.addEventListener("click", async () => {
-          let link = input.value.trim();
-          if (!link) return;
-          if (!/^https?:\/\//i.test(link)){
-            link = "https://" + link;
+          let link = safeHttpUrl(input.value);
+          if (!link){
+            showToast("Please enter a valid http:// or https:// link.", "error");
+            return;
           }
           btn.disabled = true;
           btn.textContent = "Saving…";

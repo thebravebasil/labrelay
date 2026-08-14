@@ -88,6 +88,38 @@
         <label><input type="radio" name="e-loc" value="In-person"> In-person</label>
       </div>
     </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="e-level">Difficulty</label>
+        <select id="e-level">
+          <option>Beginner</option>
+          <option>Intermediate</option>
+          <option>Advanced</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="e-topic">Research topic</label>
+        <input id="e-topic" type="text">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="e-supervision">Supervision</label>
+        <select id="e-supervision">
+          <option>Researcher-supervised</option>
+          <option>Adult-supervised on site</option>
+          <option>Independent, non-sensitive task</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="e-eligibility">Eligibility</label>
+        <select id="e-eligibility">
+          <option>Student-friendly</option>
+          <option>High-school+</option>
+          <option>College+</option>
+        </select>
+      </div>
+    </div>
     <div class="modal-actions">
       <button type="button" class="btn-ghost" id="editCancel">Cancel</button>
       <button type="button" class="btn btn-amber" id="editSave">Save changes</button>
@@ -104,7 +136,7 @@
 </footer>
 
 <script type="module">
-  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
+  import { db, auth, initNavAuth, showToast, escapeHTML, safeHttpUrl } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     collection, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc
@@ -136,6 +168,11 @@
     try {
       await updateDoc(doc(db, "tasks", editingTaskId), {
         title, desc, time, loc,
+        level: document.getElementById("e-level").value,
+        tag: document.getElementById("e-level").value,
+        topic: document.getElementById("e-topic").value.trim(),
+        supervision: document.getElementById("e-supervision").value,
+        eligibility: document.getElementById("e-eligibility").value,
         tags: tagsRaw ? tagsRaw.split(",").map(s => s.trim()).filter(Boolean) : []
       });
       editModal.classList.remove("show");
@@ -182,8 +219,8 @@
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
             <div>
-              <h3>${task.title} ${isFilled ? '<span class="status-badge status-accepted" style="margin-left:8px; vertical-align:middle;">Filled</span>' : ''}</h3>
-              <div class="mytask-meta">${task.tag || ""} · ${task.time} · ${task.loc}</div>
+              <h3>${escapeHTML(task.title || "Untitled task")} ${isFilled ? '<span class="status-badge status-accepted" style="margin-left:8px; vertical-align:middle;">Filled</span>' : ''}</h3>
+              <div class="mytask-meta">${escapeHTML(task.level || task.tag || "Task")} · ${escapeHTML(task.time || "")} · ${escapeHTML(task.loc || "Remote")}</div>
             </div>
             <div class="applicant-actions">
               <button type="button" class="btn-ghost" data-action="toggle">${isFilled ? "Reopen" : "Mark filled"}</button>
@@ -213,6 +250,10 @@
           document.getElementById("e-desc").value = task.desc || "";
           document.getElementById("e-time").value = task.time || "1–2 hrs";
           document.getElementById("e-tags").value = Array.isArray(task.tags) ? task.tags.join(", ") : "";
+          document.getElementById("e-level").value = task.level || task.tag || "Beginner";
+          document.getElementById("e-topic").value = task.topic || "";
+          document.getElementById("e-supervision").value = task.supervision || "Researcher-supervised";
+          document.getElementById("e-eligibility").value = task.eligibility || "Student-friendly";
           document.querySelectorAll('input[name="e-loc"]').forEach(r => { r.checked = (r.value === task.loc); });
           editModal.classList.add("show");
           setTimeout(() => document.getElementById("e-title").focus(), 50);
@@ -236,16 +277,15 @@
             const row = document.createElement("div");
             row.className = "applicant-row";
             const statusClass = app.status === "accepted" ? "status-accepted" : app.status === "declined" ? "status-declined" : "status-pending";
-            const rawLink = app.submissionLink || "";
-            const safeLink = rawLink && !/^https?:\/\//i.test(rawLink) ? "https://" + rawLink : rawLink;
+            const safeLink = safeHttpUrl(app.submissionLink || "");
             const submissionHtml = (app.status === "accepted" && safeLink)
-              ? `<a class="submission-link-view" href="${safeLink}" target="_blank" rel="noopener">View submitted work →</a>`
+              ? `<a class="submission-link-view" href="${escapeHTML(safeLink)}" target="_blank" rel="noopener">View submitted work →</a>`
               : (app.status === "accepted" ? `<span class="empty-note" style="font-size:11.5px;">Waiting on submission</span>` : "");
             row.innerHTML = `
               <div class="applicant-info">
-                <strong>${app.studentName || app.studentEmail}</strong>
-                <span class="applicant-email">${app.studentEmail}</span>
-                <p class="applicant-note">${app.note ? app.note : "<em>No note included.</em>"}</p>
+                <strong>${escapeHTML(app.studentName || app.studentEmail || "Student")}</strong>
+                <span class="applicant-email">${escapeHTML(app.studentEmail || "")}</span>
+                <p class="applicant-note">${app.note ? escapeHTML(app.note) : "<em>No note included.</em>"}</p>
                 ${submissionHtml}
               </div>
               <div class="applicant-actions">

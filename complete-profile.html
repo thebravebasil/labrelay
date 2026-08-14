@@ -49,6 +49,14 @@
           <label><input type="radio" name="role" value="Researcher"> Researcher / Doctor</label>
         </div>
       </div>
+      <div class="field">
+        <label for="p-affiliation">School / lab / organization (optional)</label>
+        <input id="p-affiliation" type="text" placeholder="e.g. Montgomery Blair High School or University lab">
+      </div>
+      <div class="field">
+        <label for="p-skills">Skills (comma-separated)</label>
+        <input id="p-skills" type="text" placeholder="e.g. Python, biology, Excel">
+      </div>
       <button class="btn btn-amber" type="submit" style="width:100%; justify-content:center;">Continue</button>
     </form>
   </div>
@@ -86,11 +94,18 @@
     const user = auth.currentUser;
     if (!user) return;
     const role = document.querySelector('input[name="role"]:checked').value;
+    const affiliation = document.getElementById("p-affiliation").value.trim();
+    const skillsRaw = document.getElementById("p-skills").value.trim();
 
     await setDoc(doc(db, "users", user.uid), {
       name: user.displayName || user.email,
       email: user.email,
       role,
+      affiliation,
+      skills: skillsRaw ? skillsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
+      interests: [],
+      availability: "",
+      verificationStatus: "unverified",
       createdAt: serverTimestamp()
     });
 

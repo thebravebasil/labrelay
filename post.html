@@ -78,6 +78,20 @@
             <input id="f-tags" type="text" placeholder="e.g. Excel, careful reading">
           </div>
         </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f-level">Difficulty</label>
+            <select id="f-level">
+              <option>Beginner</option>
+              <option>Intermediate</option>
+              <option>Advanced</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-topic">Research topic</label>
+            <input id="f-topic" type="text" placeholder="e.g. neuroscience, public health">
+          </div>
+        </div>
         <div class="field">
           <label>Where does this happen?</label>
           <div class="radio-row">
@@ -85,7 +99,35 @@
             <label><input type="radio" name="loc" value="In-person"> In-person</label>
           </div>
         </div>
-        <p class="form-note">Posted as <strong id="postingAs"></strong>. Students who apply will reach out to the email on your account.</p>
+        <div class="field">
+          <label for="f-data">Data sensitivity</label>
+          <select id="f-data">
+            <option value="Public / non-sensitive">Public / non-sensitive</option>
+            <option value="De-identified / approved">De-identified / approved</option>
+          </select>
+          <p class="form-note">LabRelay is not a place to upload patient-identifying, private, or confidential research data.</p>
+        </div>
+        <div class="field">
+          <label for="f-supervision">Supervision</label>
+          <select id="f-supervision">
+            <option>Researcher-supervised</option>
+            <option>Adult-supervised on site</option>
+            <option>Independent, non-sensitive task</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Eligibility</label>
+          <div class="radio-row">
+            <label><input type="radio" name="eligibility" value="Student-friendly" checked> Student-friendly</label>
+            <label><input type="radio" name="eligibility" value="High-school+"> High-school+</label>
+            <label><input type="radio" name="eligibility" value="College+"> College+</label>
+          </div>
+        </div>
+        <label class="form-note" style="display:flex; gap:10px; align-items:flex-start;">
+          <input id="f-safe" type="checkbox" style="margin-top:3px;" required>
+          <span>I confirm this task does not require a student to access patient-identifying, private, or confidential data.</span>
+        </label>
+        <p class="form-note">Posted as <strong id="postingAs"></strong>. New researcher accounts are shown as <strong>Unverified</strong> until LabRelay adds a verification process.</p>
         <button class="btn btn-amber" type="submit">Post task</button>
       </form>
     </div>
@@ -140,16 +182,50 @@
     const time = document.getElementById("f-time").value;
     const tagsRaw = document.getElementById("f-tags").value.trim();
     const loc = document.querySelector('input[name="loc"]:checked').value;
+    const level = document.getElementById("f-level").value;
+    const topic = document.getElementById("f-topic").value.trim();
+    const dataSensitivity = document.getElementById("f-data").value;
+    const supervision = document.getElementById("f-supervision").value;
+    const eligibility = document.querySelector('input[name="eligibility"]:checked').value;
+    const safetyConfirmed = document.getElementById("f-safe").checked;
+
+    if (!safetyConfirmed){
+      showToast("Please confirm that the task does not require access to private or patient-identifying data.", "error");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Post task";
+      return;
+    }
 
     try {
+      let researcherVerification = "unverified";
+      let researcherAffiliation = "";
+      try {
+        const profileSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        if (profileSnap.exists()){
+          researcherVerification = profileSnap.data().verificationStatus || "unverified";
+          researcherAffiliation = profileSnap.data().affiliation || "";
+        }
+      } catch (profileErr) {
+        console.warn("Could not load researcher profile details:", profileErr);
+      }
+
       await addDoc(tasksCol, {
         title,
         desc,
-        tag: "New",
+        topic,
+        tag: level,
+        level,
         time,
         loc,
+        dataSensitivity,
+        supervision,
+        eligibility,
+        safetyConfirmed,
+        researcherVerification,
+        researcherAffiliation,
         tags: tagsRaw ? tagsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
         r: Number((Math.random() * 4 - 2).toFixed(1)),
+        status: "open",
         createdAt: serverTimestamp(),
         createdBy: auth.currentUser.uid,
         createdByEmail: auth.currentUser.email

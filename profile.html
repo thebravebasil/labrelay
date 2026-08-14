@@ -60,6 +60,26 @@
           <label><input type="radio" name="p-role" value="Researcher"> Researcher / Doctor</label>
         </div>
       </div>
+      <div class="field">
+        <label for="p-affiliation">School / lab / organization</label>
+        <input id="p-affiliation" type="text" placeholder="e.g. school, university lab, hospital">
+      </div>
+      <div class="field">
+        <label for="p-skills">Skills (comma-separated)</label>
+        <input id="p-skills" type="text" placeholder="e.g. Python, biology, Excel">
+      </div>
+      <div class="field">
+        <label for="p-interests">Research interests (comma-separated)</label>
+        <input id="p-interests" type="text" placeholder="e.g. neuroscience, public health">
+      </div>
+      <div class="field">
+        <label for="p-availability">Availability</label>
+        <input id="p-availability" type="text" placeholder="e.g. 3 hours/week after school">
+      </div>
+      <div class="profile-trust-note">
+        <strong>Verification status:</strong> <span id="p-verification">Unverified</span>
+        <p class="form-note">LabRelay does not currently verify identities or affiliations. This label is informational and should not be treated as an endorsement.</p>
+      </div>
       <p class="form-note">Changing your role only affects how you're described — it won't move or delete anything you've already posted or applied to.</p>
       <button class="btn btn-amber" type="submit">Save changes</button>
     </form>
@@ -102,6 +122,11 @@
       if (snap.exists()){
         const data = snap.data();
         document.getElementById("p-name").value = data.name || "";
+        document.getElementById("p-affiliation").value = data.affiliation || "";
+        document.getElementById("p-skills").value = Array.isArray(data.skills) ? data.skills.join(", ") : "";
+        document.getElementById("p-interests").value = Array.isArray(data.interests) ? data.interests.join(", ") : "";
+        document.getElementById("p-availability").value = data.availability || "";
+        document.getElementById("p-verification").textContent = (data.verificationStatus || "unverified").replace(/^\w/, c => c.toUpperCase());
         document.querySelectorAll('input[name="p-role"]').forEach(r => {
           r.checked = (r.value === data.role);
         });
@@ -119,13 +144,24 @@
     const name = document.getElementById("p-name").value.trim();
     const roleInput = document.querySelector('input[name="p-role"]:checked');
     if (!name || !roleInput) return;
+    const affiliation = document.getElementById("p-affiliation").value.trim();
+    const skillsRaw = document.getElementById("p-skills").value.trim();
+    const interestsRaw = document.getElementById("p-interests").value.trim();
+    const availability = document.getElementById("p-availability").value.trim();
 
     const submitBtn = form.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     submitBtn.textContent = "Saving…";
 
     try {
-      await updateDoc(doc(db, "users", currentUid), { name, role: roleInput.value });
+      await updateDoc(doc(db, "users", currentUid), {
+        name,
+        role: roleInput.value,
+        affiliation,
+        skills: skillsRaw ? skillsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
+        interests: interestsRaw ? interestsRaw.split(",").map(s => s.trim()).filter(Boolean) : [],
+        availability
+      });
       showToast("Profile updated.");
     } catch (err) {
       console.error("Failed to save profile:", err);

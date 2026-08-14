@@ -61,6 +61,18 @@
         <option value="Remote">Remote</option>
         <option value="In-person">In-person</option>
       </select>
+      <select id="filterLevel">
+        <option value="">Any difficulty</option>
+        <option value="Beginner">Beginner</option>
+        <option value="Intermediate">Intermediate</option>
+        <option value="Advanced">Advanced</option>
+      </select>
+      <select id="filterEligibility">
+        <option value="">Any eligibility</option>
+        <option value="Student-friendly">Student-friendly</option>
+        <option value="High-school+">High-school+</option>
+        <option value="College+">College+</option>
+      </select>
       <button type="button" class="btn-ghost" id="filterClear">Clear</button>
     </div>
     <p class="empty-note" id="filterCount" style="margin-bottom:18px;"></p>
@@ -89,9 +101,9 @@
 </footer>
 
 <script type="module">
-  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
+  import { db, auth, initNavAuth, showToast, escapeHTML } from "./firebase-init.js";
   import {
-    collection, query, orderBy, onSnapshot, addDoc, doc, getDoc, serverTimestamp
+    collection, query, where, orderBy, onSnapshot, addDoc, doc, getDoc, getDocs, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   initNavAuth();
@@ -113,6 +125,8 @@
   const searchInput = document.getElementById("filterSearch");
   const timeSelect = document.getElementById("filterTime");
   const locSelect = document.getElementById("filterLoc");
+  const levelSelect = document.getElementById("filterLevel");
+  const eligibilitySelect = document.getElementById("filterEligibility");
   const clearBtn = document.getElementById("filterClear");
   const filterCount = document.getElementById("filterCount");
 
@@ -142,6 +156,8 @@
     const filtered = allTasks.filter(t => {
       if (timeVal && t.time !== timeVal) return false;
       if (locVal && t.loc !== locVal) return false;
+      if (levelSelect.value && (t.level || t.tag) !== levelSelect.value) return false;
+      if (eligibilitySelect.value && (t.eligibility || "Student-friendly") !== eligibilitySelect.value) return false;
       if (searchTerm){
         const tagsArr = Array.isArray(t.tags) ? t.tags : [];
         const haystack = [t.title, t.desc, ...tagsArr].join(" ").toLowerCase();
@@ -150,7 +166,7 @@
       return true;
     });
 
-    const anyFilterActive = searchTerm || timeVal || locVal;
+    const anyFilterActive = searchTerm || timeVal || locVal || levelSelect.value || eligibilitySelect.value;
     filterCount.textContent = anyFilterActive
       ? `Showing ${filtered.length} of ${allTasks.length} tasks`
       : "";
@@ -163,17 +179,21 @@
   searchInput.addEventListener("input", debouncedApplyFilters);
   timeSelect.addEventListener("change", applyFilters);
   locSelect.addEventListener("change", applyFilters);
+  levelSelect.addEventListener("change", applyFilters);
+  eligibilitySelect.addEventListener("change", applyFilters);
   clearBtn.addEventListener("click", () => {
     searchInput.value = "";
     timeSelect.value = "";
     locSelect.value = "";
+    levelSelect.value = "";
+    eligibilitySelect.value = "";
     applyFilters();
   });
 
   function renderTasks(docs){
     grid.innerHTML = "";
     if (docs.length === 0){
-      const anyFilterActive = searchInput.value.trim() || timeSelect.value || locSelect.value;
+      const anyFilterActive = searchInput.value.trim() || timeSelect.value || locSelect.value || levelSelect.value || eligibilitySelect.value;
       grid.innerHTML = anyFilterActive
         ? '<p class="empty-note">No tasks match your filters — try clearing them.</p>'
         : '<p class="empty-note">No open tasks right now — check back soon.</p>';
@@ -188,13 +208,26 @@
       card.className = "task-card";
       card.style.setProperty("--r", (t.r || 0) + "deg");
       const tagsArr = Array.isArray(t.tags) ? t.tags : [];
+      const verification = t.researcherVerification || "unverified";
+      const verificationLabel = verification === "verified" ? "Verified affiliation" : "Unverified researcher";
+      const verificationClass = verification === "verified" ? "trust-verified" : "trust-unverified";
       card.innerHTML = `
-        <div class="task-meta">${t.tag} · ${t.loc}</div>
-        <h4>${t.title}</h4>
-        <p>${t.desc}</p>
-        <div class="task-tags">${tagsArr.map(x => `<span class="chip">${x}</span>`).join("")}</div>
+        <div class="task-meta">${escapeHTML(t.level || t.tag || "Task")} · ${escapeHTML(t.loc || "Remote")}</div>
+        <h4>${escapeHTML(t.title || "Untitled task")}</h4>
+        <p>${escapeHTML(t.desc || "")}</p>
+        ${t.topic ? `<p class="task-topic"><strong>Topic:</strong> ${escapeHTML(t.topic)}</p>` : ""}
+        <div class="task-trust-row">
+          <span class="trust-badge ${verificationClass}">${escapeHTML(verificationLabel)}</span>
+          <span class="safety-badge">No patient-identifying data</span>
+        </div>
+        <div class="task-details">
+          <span>${escapeHTML(t.time || "Time not specified")}</span>
+          <span>${escapeHTML(t.supervision || "Researcher-supervised")}</span>
+          <span>${escapeHTML(t.eligibility || "Student-friendly")}</span>
+        </div>
+        <div class="task-tags">${tagsArr.map(x => `<span class="chip">${escapeHTML(x)}</span>`).join("")}</div>
         <div class="task-foot">
-          <span class="task-time">${t.time}</span>
+          <span class="task-time">${escapeHTML(t.time || "")}</span>
           <button class="link-btn" type="button">I'm interested →</button>
         </div>
       `;
@@ -235,6 +268,14 @@
     applySubmit.textContent = "Sending…";
 
     try {
+      // Prevent accidental duplicate applications to the same task.
+      const existingQ = query(collection(db, "tasks", activeTaskId, "applications"), where("studentId", "==", auth.currentUser.uid));
+      const existingSnap = await getDocs(existingQ);
+      if (!existingSnap.empty){
+        showToast("You've already applied to this task.", "error");
+        return;
+      }
+
       let studentName = auth.currentUser.email;
       try {
         const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
