@@ -1,173 +1,300 @@
 /* ==========================================
-   LabRelay AI Chat
+   LabRelay AI Chat — Modern Minimal Style
    ========================================== */
 
 #lr-ai-button {
   position: fixed;
   right: 24px;
   bottom: 24px;
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   border: none;
-  border-radius: 50%;
-  background: #8F98FF;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #8F98FF 0%, #6B7FD9 100%);
   color: white;
-  font-size: 25px;
+  font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 8px 30px rgba(20,23,46,.22);
+  box-shadow: 0 12px 32px rgba(143, 152, 255, 0.28);
   z-index: 99999;
-  transition: transform .15s ease;
+  transition: all .2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
 }
 
 #lr-ai-button:hover {
-  transform: scale(1.05);
-  background: #7178E0;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(143, 152, 255, 0.35);
+  background: linear-gradient(135deg, #9FA9FF 0%, #7B8FE9 100%);
+}
+
+#lr-ai-button:active {
+  transform: translateY(0);
 }
 
 #lr-ai-panel {
   position: fixed;
   right: 24px;
-  bottom: 94px;
-  width: min(380px, calc(100vw - 32px));
-  height: 540px;
+  bottom: 96px;
+  width: min(400px, calc(100vw - 32px));
+  height: 560px;
   background: white;
-  border: 1px solid #E1E3F0;
-  border-radius: 18px;
-  box-shadow: 0 15px 50px rgba(20,23,46,.2);
+  border: 1px solid #E8EAFC;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(20, 23, 46, 0.16);
   display: none;
   flex-direction: column;
   overflow: hidden;
   z-index: 99998;
   font-family: 'Inter', sans-serif;
+  backdrop-filter: blur(10px);
 }
 
 #lr-ai-panel.open {
   display: flex;
+  animation: slideUp .3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 #lr-ai-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 18px;
-  background: #14172E;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #14172E 0%, #1F2445 100%);
   color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 #lr-ai-header strong {
   display: block;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
 }
 
 #lr-ai-header small {
   display: block;
-  margin-top: 3px;
-  opacity: .65;
-  font-size: 11px;
+  margin-top: 4px;
+  opacity: 0.7;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 #lr-ai-close {
   border: none;
   background: transparent;
   color: white;
-  font-size: 25px;
+  font-size: 28px;
   cursor: pointer;
   line-height: 1;
+  opacity: 0.6;
+  transition: opacity .2s ease;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#lr-ai-close:hover {
+  opacity: 1;
 }
 
 #lr-ai-messages {
   flex: 1;
   padding: 16px;
   overflow-y: auto;
-  background: #F5F6FC;
+  background: #FAFBFF;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#lr-ai-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#lr-ai-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#lr-ai-messages::-webkit-scrollbar-thumb {
+  background: #D0D4E8;
+  border-radius: 3px;
+}
+
+#lr-ai-messages::-webkit-scrollbar-thumb:hover {
+  background: #B8BDD8;
 }
 
 .lr-ai-message {
   max-width: 85%;
-  margin-bottom: 12px;
-  padding: 10px 13px;
-  border-radius: 13px;
-  font-size: 14px;
-  line-height: 1.45;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  animation: fadeIn .2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .lr-ai-message.bot {
   background: white;
-  border: 1px solid #E1E3F0;
+  border: 1px solid #E8EAFC;
   color: #14172E;
+  align-self: flex-start;
+  box-shadow: 0 2px 6px rgba(20, 23, 46, 0.04);
 }
 
 .lr-ai-message.user {
-  margin-left: auto;
-  background: #14172E;
+  background: linear-gradient(135deg, #8F98FF 0%, #6B7FD9 100%);
   color: white;
+  align-self: flex-end;
+  max-width: 85%;
+  box-shadow: 0 2px 8px rgba(143, 152, 255, 0.2);
 }
 
 #lr-ai-loading {
   display: none;
-  padding: 10px 15px;
-  border-top: 1px solid #E1E3F0;
+  padding: 12px 16px;
+  border-top: 1px solid #E8EAFC;
+  background: #F5F7FF;
   font-size: 12px;
   color: #5B5F7A;
 }
 
 #lr-ai-progress {
   width: 100%;
-  margin-top: 7px;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 2px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #E8EAFC;
+}
+
+#lr-ai-progress::-webkit-progress-bar {
+  background: #E8EAFC;
+  border-radius: 2px;
+}
+
+#lr-ai-progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #8F98FF, #6B7FD9);
+  border-radius: 2px;
 }
 
 #lr-ai-progress-text {
-  opacity: .6;
+  opacity: 0.6;
+  font-size: 11px;
 }
 
 #lr-ai-form {
   display: flex;
   gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #E1E3F0;
+  padding: 14px;
+  border-top: 1px solid #E8EAFC;
   background: white;
+  flex-shrink: 0;
 }
 
 #lr-ai-input {
   flex: 1;
   min-width: 0;
-  border: 1px solid #E1E3F0;
+  border: 1px solid #E8EAFC;
   border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
+  padding: 10px 13px;
+  font-size: 13.5px;
   outline: none;
   font-family: 'Inter', sans-serif;
+  background: #FAFBFF;
+  color: #14172E;
+  transition: all .2s ease;
+}
+
+#lr-ai-input::placeholder {
+  color: #9CA3B8;
 }
 
 #lr-ai-input:focus {
   border-color: #8F98FF;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(143, 152, 255, 0.08);
 }
 
 #lr-ai-form button {
   border: none;
   border-radius: 10px;
-  padding: 0 15px;
-  background: #14172E;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #8F98FF 0%, #6B7FD9 100%);
   color: white;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   font-weight: 600;
+  font-size: 13.5px;
+  transition: all .2s ease;
+  flex-shrink: 0;
+}
+
+#lr-ai-form button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(143, 152, 255, 0.3);
+}
+
+#lr-ai-form button:active {
+  transform: translateY(0);
 }
 
 #lr-ai-form button:disabled {
-  opacity: .5;
+  opacity: 0.6;
   cursor: wait;
+  transform: none;
 }
 
 @media (max-width: 600px) {
   #lr-ai-button {
     right: 16px;
     bottom: 16px;
+    width: 52px;
+    height: 52px;
+    font-size: 20px;
   }
+  
   #lr-ai-panel {
     right: 8px;
-    bottom: 84px;
+    bottom: 80px;
     width: calc(100vw - 16px);
-    height: min(600px, calc(100vh - 105px));
+    height: min(600px, calc(100vh - 100px));
+    border-radius: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #lr-ai-button,
+  #lr-ai-input,
+  #lr-ai-form button,
+  .lr-ai-message {
+    transition: none;
+    animation: none;
   }
 }
