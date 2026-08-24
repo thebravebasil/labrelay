@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verification Review — LabRelay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="chatbot.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">LabRelay</span>
+      <span class="brand-no">student-built</span>
+    </a>
+    <nav class="links">
+      <a href="board.html">Browse Tasks</a>
+      <a href="post.html">Post a Task</a>
+      <a href="my-tasks.html">My Tasks</a>
+      <a href="my-applications.html">My Applications</a>
+      <a href="devlog.html">Dev Log</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div class="nav-auth" id="navAuth"></div>
+  </div>
+</header>
+
+<div class="page-header">
+  <div class="wrap">
+    <div class="section-label">Admin</div>
+    <h1 class="section-title">Verification review</h1>
+    <p>Only visible to you. Approve or deny researcher verification requests here.</p>
+  </div>
+</div>
+
+<section class="post" style="padding-top:50px;">
+  <div class="wrap" style="max-width:720px;">
+    <div id="gate" class="gate-note" style="display:none;">
+      You need to be logged in to see this. <a href="login.html">Log in</a>.
+    </div>
+    <div id="notAdmin" class="gate-note" style="display:none;">
+      This page isn't available on your account.
+    </div>
+    <div id="requestList"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-columns">
+    <div class="footer-col footer-brand">
+      <span class="footer-logo">LabRelay</span>
+      <span class="footer-field">FIELD NOTES FROM A RESEARCH TASK EXCHANGE</span>
+      <p>Built after school by one student, one commit at a time. If something's broken, that's why &mdash; and also why it gets fixed fast.</p>
+    </div>
+    <div class="footer-col footer-col--platform">
+      <h4>Platform</h4>
+      <a href="board.html">Browse Tasks</a>
+      <a href="post.html">Post a Task</a>
+      <a href="my-tasks.html">My Tasks</a>
+      <a href="my-applications.html">My Applications</a>
+    </div>
+    <div class="footer-col footer-col--about">
+      <h4>About</h4>
+      <a href="about.html">About LabRelay</a>
+      <a href="about.html#privacy">Privacy &amp; Trust</a>
+      <a href="devlog.html">Dev Log</a>
+    </div>
+    <div class="footer-col footer-col--connect">
+      <h4>Connect</h4>
+      <a href="mailto:mobasil2023@gmail.com?subject=LabRelay%20feedback">Send Feedback</a>
+      <a href="mailto:mobasil2023@gmail.com?subject=Report%20a%20bug">Found a Bug?</a>
+      <a href="https://github.com/thebravebasil/labrelay" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+  <div class="wrap footer-bottom">
+    <span>[ LabRelay &mdash; a research task exchange &middot; v1 ]</span>
+    <span>[ &copy; 2026 Mohammad Basil ]</span>
+  </div>
+</footer>
+
+<style>
+  .verify-card{
+    background:var(--paper);
+    border:1px solid var(--paper-line);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .verify-card h3{ margin:0 0 6px; font-size:16px; }
+  .verify-meta{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-on-ink-dim);
+    margin-bottom:12px;
+  }
+  .verify-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+  .btn-search{
+    background:var(--paper-2);
+    border:1px solid var(--paper-line);
+    color:var(--text-on-ink);
+    padding:9px 16px;
+    border-radius:8px;
+    font-size:13.5px;
+    text-decoration:none;
+    display:inline-block;
+  }
+  .btn-approve{
+    background:var(--sage);
+    color:#fff;
+    border:none;
+    padding:9px 16px;
+    border-radius:8px;
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .btn-deny{
+    background:transparent;
+    border:1px solid var(--rust);
+    color:var(--rust);
+    padding:9px 16px;
+    border-radius:8px;
+    font-size:13.5px;
+    cursor:pointer;
+  }
+</style>
+
+<script type="module">
+  import { db, auth, initNavAuth, showToast, escapeHTML, safeHttpUrl } from "./firebase-init.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  initNavAuth();
+
+  // This does not grant access on its own — Firestore rules are what
+  // actually restrict reads/writes to this UID. This just controls whether
+  // the page tries to load anything at all.
+  const ADMIN_UID = "iAX3s1d94xMsYtbJgz6TzcgTpC72";
+
+  const gate = document.getElementById("gate");
+  const notAdmin = document.getElementById("notAdmin");
+  const requestList = document.getElementById("requestList");
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user){
+      gate.style.display = "block";
+      notAdmin.style.display = "none";
+      requestList.innerHTML = "";
+      return;
+    }
+    if (user.uid !== ADMIN_UID){
+      gate.style.display = "none";
+      notAdmin.style.display = "block";
+      requestList.innerHTML = "";
+      return;
+    }
+    gate.style.display = "none";
+    notAdmin.style.display = "none";
+    loadPendingRequests();
+  });
+
+  function loadPendingRequests(){
+    requestList.innerHTML = '<p class="empty-note">Loading pending requests…</p>';
+
+    const q = query(collection(db, "users"), where("verificationStatus", "==", "pending"));
+
+    onSnapshot(q, (snapshot) => {
+      if (snapshot.empty){
+        requestList.innerHTML = '<p class="empty-note">No pending verification requests right now.</p>';
+        return;
+      }
+
+      requestList.innerHTML = snapshot.docs.map((userDoc) => {
+        const data = userDoc.data();
+        const uid = userDoc.id;
+        const name = escapeHTML(data.name || "Unnamed");
+        const email = escapeHTML(data.email || "");
+        const affiliation = escapeHTML(data.verificationAffiliation || data.affiliation || "");
+        const proof = safeHttpUrl(data.verificationProofUrl || "");
+        const searchQuery = encodeURIComponent(`"${data.name || ""}" ${data.verificationAffiliation || data.affiliation || ""}`);
+
+        return `
+          <div class="verify-card" data-uid="${uid}">
+            <h3>${name}</h3>
+            <div class="verify-meta">${email} &middot; ${affiliation || "No affiliation given"}</div>
+            ${proof ? `<a href="${escapeHTML(proof)}" target="_blank" rel="noopener">${escapeHTML(proof)}</a>` : '<em>No proof link submitted.</em>'}
+            <div class="verify-row">
+              <a class="btn-search" href="https://www.google.com/search?q=${searchQuery}" target="_blank" rel="noopener">Quick search &#8599;</a>
+              <button type="button" class="btn-approve" data-action="approve">Approve</button>
+              <button type="button" class="btn-deny" data-action="deny">Deny</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      requestList.querySelectorAll(".verify-card").forEach((card) => {
+        const uid = card.dataset.uid;
+        card.querySelector('[data-action="approve"]').addEventListener("click", () => review(uid, "verified"));
+        card.querySelector('[data-action="deny"]').addEventListener("click", () => review(uid, "unverified"));
+      });
+    }, (err) => {
+      console.error("Failed to load pending requests:", err);
+      requestList.innerHTML = '<p class="empty-note">Couldn\'t load requests. Check the browser console for details.</p>';
+    });
+  }
+
+  async function review(uid, newStatus){
+    try {
+      await updateDoc(doc(db, "users", uid), {
+        verificationStatus: newStatus,
+        verificationReviewedAt: serverTimestamp()
+      });
+      showToast(newStatus === "verified" ? "Approved." : "Denied.");
+    } catch (err) {
+      console.error("Failed to update verification status:", err);
+      showToast("Couldn't save that decision. Please try again.", "error");
+    }
+  }
+</script>
+<script type="module" src="chatbot.js"></script>
+</body>
+</html>
