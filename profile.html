@@ -79,6 +79,22 @@
       <div class="profile-trust-note">
         <strong>Verification status:</strong> <span id="p-verification">Unverified</span>
         <p class="form-note">LabRelay does not currently verify identities or affiliations. This label is informational and should not be treated as an endorsement.</p>
+
+        <div id="verifyRequestForm" style="display:none; margin-top:14px;">
+          <div class="field">
+            <label for="v-affiliation">Affiliation / title</label>
+            <input id="v-affiliation" type="text" placeholder="e.g. Assistant Professor, UMD Bioengineering">
+          </div>
+          <div class="field">
+            <label for="v-proof">Link that proves this (lab page, university directory, Google Scholar)</label>
+            <input id="v-proof" type="text" placeholder="https://...">
+          </div>
+          <button type="button" class="btn btn-outline" id="submitVerification">Request verification</button>
+        </div>
+
+        <div id="verifyPendingNote" style="display:none; margin-top:14px;">
+          <p class="form-note">Your verification request is pending review. This can take a few days.</p>
+        </div>
       </div>
       <p class="form-note">Changing your role only affects how you're described — it won't move or delete anything you've already posted or applied to.</p>
       <button class="btn btn-amber" type="submit">Save changes</button>
@@ -120,16 +136,42 @@
 </footer>
 
 <script type="module">
-  import { db, auth, initNavAuth, showToast } from "./firebase-init.js";
+  import { db, auth, initNavAuth, showToast, safeHttpUrl } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   initNavAuth();
 
   const gate = document.getElementById("gate");
   const form = document.getElementById("profileForm");
+  const verifyRequestForm = document.getElementById("verifyRequestForm");
+  const verifyPendingNote = document.getElementById("verifyPendingNote");
+  const affiliationInput = document.getElementById("v-affiliation");
+  const proofInput = document.getElementById("v-proof");
+  const submitVerificationBtn = document.getElementById("submitVerification");
   let currentUid = null;
   let currentVerificationStatus = "unverified";
+
+  function updateVerificationUI(){
+    const roleInput = document.querySelector('input[name="p-role"]:checked');
+    const isResearcher = roleInput && roleInput.value === "Researcher";
+
+    verifyRequestForm.style.display = "none";
+    verifyPendingNote.style.display = "none";
+
+    if (!isResearcher) return;
+
+    if (currentVerificationStatus === "pending"){
+      verifyPendingNote.style.display = "block";
+    } else if (currentVerificationStatus === "unverified"){
+      verifyRequestForm.style.display = "block";
+    }
+    // "verified" shows neither block — just the status label above.
+  }
+
+  document.querySelectorAll('input[name="p-role"]').forEach(r => {
+    r.addEventListener("change", updateVerificationUI);
+  });
 
   onAuthStateChanged(auth, async (user) => {
     if (!user){
@@ -154,13 +196,54 @@
         document.getElementById("p-availability").value = data.availability || "";
         currentVerificationStatus = data.verificationStatus || "unverified";
         document.getElementById("p-verification").textContent = currentVerificationStatus.replace(/^\w/, c => c.toUpperCase());
+        affiliationInput.value = data.verificationAffiliation || data.affiliation || "";
+        proofInput.value = data.verificationProofUrl || "";
         document.querySelectorAll('input[name="p-role"]').forEach(r => {
           r.checked = (r.value === data.role);
         });
+        updateVerificationUI();
       }
     } catch (err) {
       console.error("Failed to load profile:", err);
       showToast("Couldn't load your profile. Please refresh and try again.", "error");
+    }
+  });
+
+  submitVerificationBtn.addEventListener("click", async () => {
+    if (!currentUid) return;
+    const affiliation = affiliationInput.value.trim();
+    const proof = safeHttpUrl(proofInput.value);
+
+    if (!affiliation){
+      showToast("Please add your affiliation or title.", "error");
+      return;
+    }
+    if (!proof){
+      showToast("Please enter a valid http:// or https:// link.", "error");
+      return;
+    }
+
+    submitVerificationBtn.disabled = true;
+    submitVerificationBtn.textContent = "Submitting…";
+
+    try {
+      await updateDoc(doc(db, "users", currentUid), {
+        verificationStatus: "pending",
+        verificationAffiliation: affiliation,
+        verificationProofUrl: proof,
+        verificationSubmittedAt: serverTimestamp()
+      });
+      currentVerificationStatus = "pending";
+      document.getElementById("p-verification").textContent = "Pending";
+      proofInput.value = proof;
+      updateVerificationUI();
+      showToast("Verification request sent.");
+    } catch (err) {
+      console.error("Failed to submit verification request:", err);
+      showToast("Couldn't send that request. Please try again.", "error");
+    } finally {
+      submitVerificationBtn.disabled = false;
+      submitVerificationBtn.textContent = "Request verification";
     }
   });
 
