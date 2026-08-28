@@ -34,19 +34,44 @@
 <div class="page-header">
   <div class="wrap">
     <div class="section-label">Admin</div>
-    <h1 class="section-title">Verification review</h1>
-    <p>Only visible to you. Approve or deny researcher verification requests here.</p>
+    <h1 class="section-title">User &amp; verification review</h1>
+    <p>Only visible to you. Filter, search, and approve or deny verification for any user.</p>
   </div>
 </div>
 
 <section class="post" style="padding-top:50px;">
-  <div class="wrap" style="max-width:720px;">
+  <div class="wrap" style="max-width:820px;">
     <div id="gate" class="gate-note" style="display:none;">
       You need to be logged in to see this. <a href="login.html">Log in</a>.
     </div>
     <div id="notAdmin" class="gate-note" style="display:none;">
       This page isn't available on your account.
     </div>
+
+    <div id="controls" class="admin-controls" style="display:none;">
+      <input type="text" id="searchBox" placeholder="Search by name or email…" class="admin-search">
+      <div class="filter-row">
+        <div class="filter-group">
+          <span class="filter-label">Status</span>
+          <div class="pill-row" id="statusFilter">
+            <button type="button" class="pill active" data-value="all">All</button>
+            <button type="button" class="pill" data-value="unverified">Unverified</button>
+            <button type="button" class="pill" data-value="pending">Pending</button>
+            <button type="button" class="pill" data-value="verified">Verified</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Role</span>
+          <div class="pill-row" id="roleFilter">
+            <button type="button" class="pill active" data-value="all">All</button>
+            <button type="button" class="pill" data-value="Student">Students</button>
+            <button type="button" class="pill" data-value="Researcher">Researchers</button>
+          </div>
+        </div>
+      </div>
+      <div class="result-count" id="resultCount"></div>
+    </div>
+
     <div id="requestList"></div>
   </div>
 </section>
@@ -85,6 +110,48 @@
 </footer>
 
 <style>
+  .admin-controls{ margin-bottom:28px; }
+  .admin-search{
+    width:100%;
+    padding:11px 14px;
+    border:1px solid var(--paper-line);
+    border-radius:8px;
+    font-family:var(--sans);
+    font-size:14px;
+    margin-bottom:16px;
+    box-sizing:border-box;
+  }
+  .filter-row{ display:flex; flex-wrap:wrap; gap:24px; margin-bottom:10px; }
+  .filter-group{ display:flex; flex-direction:column; gap:6px; }
+  .filter-label{
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-on-ink-dim);
+  }
+  .pill-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .pill{
+    background:var(--paper-2);
+    border:1px solid var(--paper-line);
+    color:var(--text-on-ink-dim);
+    padding:6px 13px;
+    border-radius:20px;
+    font-size:12.5px;
+    cursor:pointer;
+    font-family:var(--sans);
+  }
+  .pill.active{
+    background:var(--sage);
+    border-color:var(--sage);
+    color:#fff;
+  }
+  .result-count{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--text-on-ink-dim);
+    margin-top:6px;
+  }
   .verify-card{
     background:var(--paper);
     border:1px solid var(--paper-line);
@@ -92,13 +159,25 @@
     padding:20px;
     margin-bottom:16px;
   }
-  .verify-card h3{ margin:0 0 6px; font-size:16px; }
+  .verify-card h3{ margin:0 0 6px; font-size:16px; display:flex; align-items:center; gap:10px; }
   .verify-meta{
     font-family:var(--mono);
     font-size:12px;
     color:var(--text-on-ink-dim);
     margin-bottom:12px;
   }
+  .status-pill{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    padding:3px 9px;
+    border-radius:12px;
+    font-weight:600;
+  }
+  .status-pill.unverified{ background:var(--paper-2); color:var(--text-on-ink-dim); border:1px solid var(--paper-line); }
+  .status-pill.pending{ background:#FFF4DE; color:#8A5A00; }
+  .status-pill.verified{ background:#E3F5E9; color:#146C3E; }
   .verify-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
   .btn-search{
     background:var(--paper-2);
@@ -128,13 +207,22 @@
     font-size:13.5px;
     cursor:pointer;
   }
+  .btn-revoke{
+    background:transparent;
+    border:1px solid var(--paper-line);
+    color:var(--text-on-ink-dim);
+    padding:9px 16px;
+    border-radius:8px;
+    font-size:13.5px;
+    cursor:pointer;
+  }
 </style>
 
 <script type="module">
   import { db, auth, initNavAuth, showToast, escapeHTML, safeHttpUrl } from "./firebase-init.js";
   import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp
+    collection, onSnapshot, doc, updateDoc, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   initNavAuth();
@@ -146,69 +234,135 @@
 
   const gate = document.getElementById("gate");
   const notAdmin = document.getElementById("notAdmin");
+  const controls = document.getElementById("controls");
   const requestList = document.getElementById("requestList");
+  const searchBox = document.getElementById("searchBox");
+  const statusFilterEl = document.getElementById("statusFilter");
+  const roleFilterEl = document.getElementById("roleFilter");
+  const resultCount = document.getElementById("resultCount");
+
+  let allUsers = [];
+  let statusFilter = "all";
+  let roleFilter = "all";
 
   onAuthStateChanged(auth, (user) => {
     if (!user){
       gate.style.display = "block";
       notAdmin.style.display = "none";
+      controls.style.display = "none";
       requestList.innerHTML = "";
       return;
     }
     if (user.uid !== ADMIN_UID){
       gate.style.display = "none";
       notAdmin.style.display = "block";
+      controls.style.display = "none";
       requestList.innerHTML = "";
       return;
     }
     gate.style.display = "none";
     notAdmin.style.display = "none";
-    loadPendingRequests();
+    controls.style.display = "block";
+    loadAllUsers();
   });
 
-  function loadPendingRequests(){
-    requestList.innerHTML = '<p class="empty-note">Loading pending requests…</p>';
+  function loadAllUsers(){
+    requestList.innerHTML = '<p class="empty-note">Loading users…</p>';
 
-    const q = query(collection(db, "users"), where("verificationStatus", "==", "pending"));
-
-    onSnapshot(q, (snapshot) => {
-      if (snapshot.empty){
-        requestList.innerHTML = '<p class="empty-note">No pending verification requests right now.</p>';
-        return;
-      }
-
-      requestList.innerHTML = snapshot.docs.map((userDoc) => {
-        const data = userDoc.data();
-        const uid = userDoc.id;
-        const name = escapeHTML(data.name || "Unnamed");
-        const email = escapeHTML(data.email || "");
-        const affiliation = escapeHTML(data.verificationAffiliation || data.affiliation || "");
-        const proof = safeHttpUrl(data.verificationProofUrl || "");
-        const searchQuery = encodeURIComponent(`"${data.name || ""}" ${data.verificationAffiliation || data.affiliation || ""}`);
-
-        return `
-          <div class="verify-card" data-uid="${uid}">
-            <h3>${name}</h3>
-            <div class="verify-meta">${email} &middot; ${affiliation || "No affiliation given"}</div>
-            ${proof ? `<a href="${escapeHTML(proof)}" target="_blank" rel="noopener">${escapeHTML(proof)}</a>` : '<em>No proof link submitted.</em>'}
-            <div class="verify-row">
-              <a class="btn-search" href="https://www.google.com/search?q=${searchQuery}" target="_blank" rel="noopener">Quick search &#8599;</a>
-              <button type="button" class="btn-approve" data-action="approve">Approve</button>
-              <button type="button" class="btn-deny" data-action="deny">Deny</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      requestList.querySelectorAll(".verify-card").forEach((card) => {
-        const uid = card.dataset.uid;
-        card.querySelector('[data-action="approve"]').addEventListener("click", () => review(uid, "verified"));
-        card.querySelector('[data-action="deny"]').addEventListener("click", () => review(uid, "unverified"));
-      });
+    onSnapshot(collection(db, "users"), (snapshot) => {
+      allUsers = snapshot.docs.map(d => ({ uid: d.id, ...d.data() }));
+      render();
     }, (err) => {
-      console.error("Failed to load pending requests:", err);
-      requestList.innerHTML = '<p class="empty-note">Couldn\'t load requests. Check the browser console for details.</p>';
+      console.error("Failed to load users:", err);
+      requestList.innerHTML = '<p class="empty-note">Couldn\'t load users. Check the browser console for details.</p>';
     });
+  }
+
+  statusFilterEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".pill");
+    if (!btn) return;
+    statusFilterEl.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    statusFilter = btn.dataset.value;
+    render();
+  });
+
+  roleFilterEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".pill");
+    if (!btn) return;
+    roleFilterEl.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    roleFilter = btn.dataset.value;
+    render();
+  });
+
+  let searchDebounce;
+  searchBox.addEventListener("input", () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(render, 150);
+  });
+
+  function render(){
+    const term = searchBox.value.trim().toLowerCase();
+
+    const filtered = allUsers.filter(u => {
+      const status = u.verificationStatus || "unverified";
+      if (statusFilter !== "all" && status !== statusFilter) return false;
+      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      if (term){
+        const haystack = `${u.name || ""} ${u.email || ""}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+
+    resultCount.textContent = `${filtered.length} user${filtered.length === 1 ? "" : "s"}`;
+
+    if (filtered.length === 0){
+      requestList.innerHTML = '<p class="empty-note">No users match these filters.</p>';
+      return;
+    }
+
+    requestList.innerHTML = filtered.map(renderCard).join("");
+
+    requestList.querySelectorAll(".verify-card").forEach((card) => {
+      const uid = card.dataset.uid;
+      const approveBtn = card.querySelector('[data-action="approve"]');
+      const denyBtn = card.querySelector('[data-action="deny"]');
+      const revokeBtn = card.querySelector('[data-action="revoke"]');
+      if (approveBtn) approveBtn.addEventListener("click", () => review(uid, "verified"));
+      if (denyBtn) denyBtn.addEventListener("click", () => review(uid, "unverified"));
+      if (revokeBtn) revokeBtn.addEventListener("click", () => review(uid, "unverified"));
+    });
+  }
+
+  function renderCard(u){
+    const status = u.verificationStatus || "unverified";
+    const name = escapeHTML(u.name || "Unnamed");
+    const email = escapeHTML(u.email || "");
+    const role = escapeHTML(u.role || "—");
+    const affiliation = escapeHTML(u.verificationAffiliation || u.affiliation || "");
+    const proof = safeHttpUrl(u.verificationProofUrl || "");
+    const searchQuery = encodeURIComponent(`"${u.name || ""}" ${u.verificationAffiliation || u.affiliation || ""}`);
+
+    let actions = `<a class="btn-search" href="https://www.google.com/search?q=${searchQuery}" target="_blank" rel="noopener">Quick search &#8599;</a>`;
+    if (status === "pending"){
+      actions += `<button type="button" class="btn-approve" data-action="approve">Approve</button>
+                   <button type="button" class="btn-deny" data-action="deny">Deny</button>`;
+    } else if (status === "unverified"){
+      actions += `<button type="button" class="btn-approve" data-action="approve">Verify anyway</button>`;
+    } else if (status === "verified"){
+      actions += `<button type="button" class="btn-revoke" data-action="revoke">Revoke</button>`;
+    }
+
+    return `
+      <div class="verify-card" data-uid="${u.uid}">
+        <h3>${name} <span class="status-pill ${status}">${status}</span></h3>
+        <div class="verify-meta">${email} &middot; ${role}${affiliation ? " &middot; " + affiliation : ""}</div>
+        ${proof ? `<a href="${escapeHTML(proof)}" target="_blank" rel="noopener">${escapeHTML(proof)}</a>` : '<em>No proof link submitted.</em>'}
+        <div class="verify-row">${actions}</div>
+      </div>
+    `;
   }
 
   async function review(uid, newStatus){
@@ -217,7 +371,7 @@
         verificationStatus: newStatus,
         verificationReviewedAt: serverTimestamp()
       });
-      showToast(newStatus === "verified" ? "Approved." : "Denied.");
+      showToast(newStatus === "verified" ? "Approved." : "Updated.");
     } catch (err) {
       console.error("Failed to update verification status:", err);
       showToast("Couldn't save that decision. Please try again.", "error");
