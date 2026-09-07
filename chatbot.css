@@ -1,5 +1,6 @@
 /* ==========================================
-   LabRelay AI Chat — Modern Minimal Style
+   LabRelay AI Chat — Modern Minimal Style (green/gold theme)
+   Replaced purple/blue accents with the site gold variables (var(--gold), var(--gold-light))
    ========================================== */
 
 #lr-ai-button {
@@ -10,11 +11,11 @@
   height: 56px;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8F98FF 0%, #6B7FD9 100%);
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
   color: white;
   font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 12px 32px rgba(143, 152, 255, 0.28);
+  box-shadow: 0 12px 32px rgba(201, 168, 76, 0.28);
   z-index: 99999;
   transition: all .2s ease;
   display: flex;
@@ -25,8 +26,8 @@
 
 #lr-ai-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 40px rgba(143, 152, 255, 0.35);
-  background: linear-gradient(135deg, #9FA9FF 0%, #7B8FE9 100%);
+  box-shadow: 0 16px 40px rgba(201, 168, 76, 0.35);
+  background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
 }
 
 #lr-ai-button:active {
@@ -40,7 +41,7 @@
   width: min(400px, calc(100vw - 32px));
   height: 560px;
   background: white;
-  border: 1px solid #E8EAFC;
+  border: 1px solid var(--paper-line);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(20, 23, 46, 0.16);
   display: none;
@@ -115,7 +116,7 @@
   flex: 1;
   padding: 16px;
   overflow-y: auto;
-  background: #FAFBFF;
+  background: var(--paper-2);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -130,12 +131,12 @@
 }
 
 #lr-ai-messages::-webkit-scrollbar-thumb {
-  background: #D0D4E8;
+  background: var(--paper-line);
   border-radius: 3px;
 }
 
 #lr-ai-messages::-webkit-scrollbar-thumb:hover {
-  background: #B8BDD8;
+  background: rgba(0,0,0,0.08);
 }
 
 .lr-ai-message {
@@ -161,27 +162,27 @@
 
 .lr-ai-message.bot {
   background: white;
-  border: 1px solid #E8EAFC;
-  color: #14172E;
+  border: 1px solid var(--paper-line);
+  color: var(--text-on-ink);
   align-self: flex-start;
   box-shadow: 0 2px 6px rgba(20, 23, 46, 0.04);
 }
 
 .lr-ai-message.user {
-  background: linear-gradient(135deg, #8F98FF 0%, #6B7FD9 100%);
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
   color: white;
   align-self: flex-end;
   max-width: 85%;
-  box-shadow: 0 2px 8px rgba(143, 152, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(201, 168, 76, 0.2);
 }
 
 #lr-ai-loading {
   display: none;
   padding: 12px 16px;
-  border-top: 1px solid #E8EAFC;
-  background: #F5F7FF;
+  border-top: 1px solid var(--paper-line);
+  background: var(--paper-2);
   font-size: 12px;
-  color: #5B5F7A;
+  color: var(--text-on-ink-dim);
 }
 
 #lr-ai-progress {
@@ -191,16 +192,16 @@
   border-radius: 2px;
   appearance: none;
   -webkit-appearance: none;
-  background: #E8EAFC;
+  background: var(--paper-line);
 }
 
 #lr-ai-progress::-webkit-progress-bar {
-  background: #E8EAFC;
+  background: var(--paper-line);
   border-radius: 2px;
 }
 
 #lr-ai-progress::-webkit-progress-value {
-  background: linear-gradient(90deg, #8F98FF, #6B7FD9);
+  background: linear-gradient(90deg, var(--gold), var(--gold-light));
   border-radius: 2px;
 }
 
@@ -213,7 +214,7 @@
   display: flex;
   gap: 8px;
   padding: 14px;
-  border-top: 1px solid #E8EAFC;
+  border-top: 1px solid var(--paper-line);
   background: white;
   flex-shrink: 0;
 }
@@ -221,14 +222,14 @@
 #lr-ai-input {
   flex: 1;
   min-width: 0;
-  border: 1px solid #E8EAFC;
+  border: 1px solid var(--paper-line);
   border-radius: 10px;
   padding: 10px 13px;
   font-size: 13.5px;
   outline: none;
   font-family: 'Inter', sans-serif;
-  background: #FAFBFF;
-  color: #14172E;
+  background: var(--paper-2);
+  color: var(--text-on-ink);
   transition: all .2s ease;
 }
 
@@ -237,16 +238,16 @@
 }
 
 #lr-ai-input:focus {
-  border-color: #8F98FF;
+  border-color: var(--gold);
   background: white;
-  box-shadow: 0 0 0 3px rgba(143, 152, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.08);
 }
 
 #lr-ai-form button {
   border: none;
   border-radius: 10px;
   padding: 10px 16px;
-  background: linear-gradient(135deg, #8F98FF 0%, #6B7FD9 100%);
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
   color: white;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
@@ -258,7 +259,7 @@
 
 #lr-ai-form button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(143, 152, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(201, 168, 76, 0.3);
 }
 
 #lr-ai-form button:active {
